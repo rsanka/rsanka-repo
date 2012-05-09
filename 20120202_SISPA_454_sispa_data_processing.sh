@@ -28,7 +28,7 @@ set sff_file_list = "\
 set fastq_file_list = "\
 "
 
-
+#@# Stage 1
 ##########################################################################################################
 
 #TODO these directories will need to be created by fabric inside the VM
@@ -146,7 +146,7 @@ cat ${barcode_file_name} | \
 
 
 
-
+#@# Stage 2
 ########################## 454 SFF SISPA DATA PROCESSING #####################
 # 454 sff data merging, deconvolution, trimming, and non-redundant filtering
 
@@ -180,6 +180,7 @@ runLinux2 \
 cat ${merged_sff_file}_sfffile_merging.std*
 
 
+#@# Stage 3
 ############ The NEW WAY - USING GRID DECONVOLVE #########################
 
 set key = `sffinfo ${merged_sff_file} | \
@@ -222,6 +223,8 @@ foreach bc ( `cat ${barcode_file_name} | cut -f 1`)
   endif
 end
 
+
+#@# Stage 4
 ############################# COPY 454 SISPA DATA TO SAMPLE AREAS ##########################
 
 #TODO what are we doing here, copying barcoded data to a new separate directory?
@@ -269,6 +272,7 @@ foreach bc_rec ( `cat ${barcode_file_name} | tr ' ' '_' | tr '\t' ':' ` )
   endif
 end
 
+#@# Stage 5
 ########################## SETUP SANGER DIRECTORIES, AND IF SANGER DATA EXISTS FOR SAMPLES, COPY IT ##################################
 
 csh
@@ -320,6 +324,7 @@ endif
 exit
 
 
+#@# Stage 6
 ########################## CONSOLIDATE SAMPLE DATA ##################################
 csh
 set sispa_pool_name = 20090205_HIsamples6to100
@@ -482,6 +487,7 @@ foreach bc_rec ( `cat ${barcode_file_name} | tr ' ' '_' | tr '\t' ':' | cut -d '
 
 end
 
+#@# Stage 7
 ################### THIS IS THE START OF VIRUS SPECIFIC HANDLING ###############
 csh
 setenv RUBYLIB /usr/local/devel/DAS/users/tstockwe/Ruby/Tools/Bio
@@ -1214,6 +1220,7 @@ foreach bc_rec ( `cat ${barcode_file_name} | grep -v "POSCTRL" | tr ' ' '_' | tr
   popd >& /dev/null
 end
 
+#@# Stage 8
 ################### REVIEW FLU VALIDATOR RESULTS FOR CLC DATA #############################
 
 set sispa_pool_name = 20110707_104xMPA_2xMG_1xSW_6xNORV
@@ -1269,6 +1276,7 @@ foreach bc_rec ( `cat ${triplet_file} | tr ',' ':' | sort -u` )
   endif
 end
 
+#@# Stage 9
 ################### GENERATE CAS2CONSED DATA #############################
 
 set sispa_pool_name = 20110707_104xMPA_2xMG_1xSW_6xNORV
@@ -1308,7 +1316,7 @@ set triplet_file = /home/tstockwe/for_vhtngs/20111121_nonMPA_samples_with_solexa
 /usr/local/devel/VIRIFX/software/bin/flu_validate2_cas2consed_ace2_assemblies.csh \
   ${triplet_file}
 
-
+#@# Stage 10
 ################### REVIEW FLU VALIDATOR RESULTS FOR CAS2CONSED DATA #############################
 set sispa_pool_name = 20090205_HIsamples6to100
 set sispa_pool_name = 20090205_34xDW_5xHI_2xUNKNOWN_samples
