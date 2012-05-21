@@ -19,24 +19,26 @@ def install():
 
 def _define_dirs():
     env.PROJECT_DIR = "%(ROOT_DIR)s/project" % env
-    env.REFS_DIR = "%(ROOT_DIR)s/refs" % env
+    env.REF_FILES = "%(REF_FILES)s" % env
+    env.REF_DIR = "%(ROOT_DIR)s/refs" % env
     env.TOOLS_DIR = "%(ROOT_DIR)s/tools" % env
     env.TOOLS_RUBYLIB_DIR = "%(TOOLS_DIR)s/RUBYLIB" % env
     env.TOOLS_BINARIES_DIR = "%(TOOLS_DIR)s/BINARIES" % env
 
 def _print_env_variables():
-    print("user: %(user)s" % env)
-    print("host: %(host)s" % env)
-    print("ROOT: %s(ROOT_DIR)s" % env)
-    print("PROJECT: %(PROJECT_DIR)s" % env)
-    print("REFS: %(REFS_DIR)s" % env)
-    print("TOOLS: %(TOOLS_DIR)s" % env)
-    print("TOOLS RUBYLIB: %(TOOLS_RUBYLIB_DIR)s" % env)
-    print("TOOLS BINARIES: %(TOOLS_BINARIES_DIR)s" % env)
+    print("user:                %(user)s" % env)
+    print("host:                %(host)s" % env)
+    print("ROOT DIR:            %(ROOT_DIR)s" % env)
+    print("PROJECT DIR:         %(PROJECT_DIR)s" % env)
+    print("REFS FILES:          %(REF_FILES)s" % env)
+    print("REFS DIR:            %(REF_DIR)s" % env)
+    print("TOOLS DIR:           %(TOOLS_DIR)s" % env)
+    print("TOOLS RUBYLIB DIR:   %(TOOLS_RUBYLIB_DIR)s" % env)
+    print("TOOLS BINARIES DIR:  %(TOOLS_BINARIES_DIR)s" % env)
 
 def _initialize_dirs():
     sudo("mkdir -p %(PROJECT_DIR)s" % env)
-    sudo("mkdir -p %(REFS_DIR)s" % env)
+    sudo("mkdir -p %(REF_DIR)s" % env)
     sudo("mkdir -p %(TOOLS_DIR)s" % env)
     sudo("mkdir -p %(TOOLS_RUBYLIB_DIR)s" % env)
     sudo("mkdir -p %(TOOLS_BINARIES_DIR)s" % env)
@@ -46,7 +48,10 @@ def _add_tools():
     _add_tarball(env.BINARIES_URL,env.BINARIES_TARBALL,env.TOOLS_BINARIES_DIR)
 
 def _add_refs():
-    _add_tarball(env.REFS_URL,env.REFS_TARBALL,env.REFS_DIR)
+    files = (env.REF_FILES).split(",")
+    for file in files:
+        _add_tarball("%s/%s" % (env.REF_URL,file),file,env.REF_DIR)
+    sudo("chmod -R 755 %(REF_DIR)s" % env)
 
 def _add_tarball(download_url,tarball,install_dir):
     print("du: %s" % download_url)
@@ -57,7 +62,7 @@ def _add_tarball(download_url,tarball,install_dir):
     _untar(install_dir,tarball)
 
 def _untar(install_dir,tarball):
-    sudo("tar xvf %s/%s -C %s" % (install_dir,tarball,install_dir))
+    sudo("tar xfz %s/%s -C %s" % (install_dir,tarball,install_dir))
 
 @task
 def clean_up():
