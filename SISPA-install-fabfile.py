@@ -50,7 +50,7 @@ def _add_tools():
 def _add_refs():
     files = (env.REF_FILES).split(",")
     for file in files:
-        _add_tarball("%s/%s" % (env.REF_URL,file),file,env.REF_DIR)
+        _add_tarball("%s/%s.tgz" % (env.REF_URL,file),file,env.REF_DIR)
     sudo("chmod -R 755 %(REF_DIR)s" % env)
 
 def _add_tarball(download_url,tarball,install_dir):
