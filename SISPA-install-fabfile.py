@@ -14,11 +14,13 @@ def install():
         _initialize_dirs()
         _add_tools()
         _add_refs()
+        _chmod("%(ROOT_DIR)s" % env)
     finally:
         disconnect_all()
 
 def _define_dirs():
     env.PROJECT_DIR = "%(ROOT_DIR)s/project" % env
+    env.SAMPLE_DATA_DIR = "%(PROJECT_DIR)s/sample_data" % env
     env.REF_FILES = "%(REF_FILES)s" % env
     env.REF_DIR = "%(ROOT_DIR)s/refs" % env
     env.TOOLS_DIR = "%(ROOT_DIR)s/tools" % env
@@ -30,6 +32,7 @@ def _print_env_variables():
     print("host:                %(host)s" % env)
     print("ROOT DIR:            %(ROOT_DIR)s" % env)
     print("PROJECT DIR:         %(PROJECT_DIR)s" % env)
+    print("SAMPLE DATA DIR:     %(SAMPLE_DATA_DIR)s" % env)
     print("REFS FILES:          %(REF_FILES)s" % env)
     print("REFS DIR:            %(REF_DIR)s" % env)
     print("TOOLS DIR:           %(TOOLS_DIR)s" % env)
@@ -38,6 +41,7 @@ def _print_env_variables():
 
 def _initialize_dirs():
     sudo("mkdir -p %(PROJECT_DIR)s" % env)
+    sudo("mkdir -p %(SAMPLE_DATA_DIR)s" % env)
     sudo("mkdir -p %(REF_DIR)s" % env)
     sudo("mkdir -p %(TOOLS_DIR)s" % env)
     sudo("mkdir -p %(TOOLS_RUBYLIB_DIR)s" % env)
@@ -50,8 +54,11 @@ def _add_tools():
 def _add_refs():
     files = (env.REF_FILES).split(",")
     for file in files:
+        sudo("mkdir -p %s/%s" % (env.SAMPLE_DATA_DIR,file))
         _add_tarball("%s/%s.tgz" % (env.REF_URL,file),file,env.REF_DIR)
-    sudo("chmod -R 755 %(REF_DIR)s" % env)
+
+def _chmod(path):
+    sudo("chmod -R 755 %s" % path)
 
 def _add_tarball(download_url,tarball,install_dir):
     print("du: %s" % download_url)
