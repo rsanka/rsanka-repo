@@ -1,5 +1,6 @@
 #
-# SISPA-install-fabfile.py
+# vir-assembly-install.py
+#  - Configures the environment for running vir-assembly-pipeline.sh (creating directory structure and installs software). 
 #
 
 import os.path, re
@@ -67,6 +68,7 @@ def _initialize_bio_linux():
     _apt_get_install("bowtie")
     _apt_get_install("samtools")
     _apt_get_install("bio-linux-cap3")
+    _apt_get_install("emboss")
 
 def _untar(install_dir,tarball):
     sudo("tar xfz %s/%s -C %s" % (install_dir,tarball,install_dir))
