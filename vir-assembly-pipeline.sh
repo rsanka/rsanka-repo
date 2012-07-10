@@ -337,7 +337,7 @@ foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
     set blast_db = ${blast_db_dir}/${seg}_full_length_NT_complete.fa
     set best_reference = ${seg_assembly_dir}/${seg}_best_reference.fna
     if ( -e ${seg}_100x_contigs.fasta ) then
-      echo "INFO: finding best FL reference for segment [${seg}] for [${db_name}/${col_name}/${bac_id}]"
+      echo "INFO: finding best FL reference for segment [${seg}] for [${db_name}]"
       set best_hit = \
         `${TOOLS_BINARIES_DIR}/blastall \
            -p blastn \
