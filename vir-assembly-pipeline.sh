@@ -1,130 +1,157 @@
-csh
+#!/bin/csh
 
-set 454_orig_sff = ${1}
-set sanger_orig_fasta = ${2}
-set solexa_orig_fastq = ${3}
-set db_name = ${4}
+set seq454_orig_sff = $1
+set sanger_orig_fasta = $2
+set solexa_orig_fastq = $3
+set db_name_input = $4
 
-echo "HERE"
+set ROOT_DIR = "/usr/local/VHTNGS"
+set PROJECT_DIR = "${ROOT_DIR}/project"
+set REF_DIR = "${ROOT_DIR}/references"
+set TOOLS_DIR = "${ROOT_DIR}/tools"
+set TOOLS_BINARIES_DIR = "${TOOLS_DIR}/BINARIES"
+set TOOLS_PERL_DIR = "${TOOLS_DIR}/PERL"
+set TOOLS_RUBYDIR_DIR = "${TOOLS_DIR}/RUBYLIB"
+set TOOLS_SFF_DIR = "${TOOLS_DIR}/SFF"
+
+cd ${PROJECT_DIR}
+
+set seq454_orig_sff_dir = "${PROJECT_DIR}/input_sff"
+set seq454_orig_sff_filename = `basename ${seq454_orig_sff}`
+set seq454_orig_sff_file = "${seq454_orig_sff_dir}/${seq454_orig_sff_filename}"
+mkdir -p ${seq454_orig_sff_dir}
+cp ${seq454_orig_sff} ${seq454_orig_sff_file}
+
+set sanger_orig_fasta_dir = "${PROJECT_DIR}/input_sanger"
+set sanger_orig_fasta_filename = `basename ${sanger_orig_fasta}`
+set sanger_orig_fasta_file = "${sanger_orig_fasta_dir}/${sanger_orig_fasta_filename}"
+mkdir -p ${sanger_orig_fasta_dir}
+cp ${sanger_orig_fasta} ${sanger_orig_fasta_file}
+
+set solexa_orig_fastq_dir = "${PROJECT_DIR}/input_solexa"
+set solexa_orig_fastq_filename = `basename ${solexa_orig_fastq}`
+set solexa_orig_fastq_file = "${solexa_orig_fastq_dir}/${solexa_orig_fastq_filename}"
+mkdir -p ${solexa_orig_fastq_dir}
+cp ${solexa_orig_fastq} ${solexa_orig_fastq_file}
 
 set flu_a = 0
 switch ($db_name)
   case barda:
     echo "Using Influenza A reference data for database [${db_name}]"
-    set ref_dir = /usr/local/projects/VHTNGS/reference_data/influenza_a_virus
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/influenza_a_virus_full_length_NT
+    set ref_dir = ${REF_DIR}/influenza_a_virus
+    set blast_db_dir = ${REF_DIR}/influenza_a_virus_full_length_NT
     set segments = "HA MP NA NP NS PA PB1 PB2"
     set seg_cov = "HA:175000 MP:100000 NA:145000 NP:155000 NS:89000 PA:220000 PB1:235000 PB2:235000"
     set flu_a = 1
   breaksw
   case giv:
     echo "Using Influenza A reference data for database [${db_name}]"
-    set ref_dir = /usr/local/projects/VHTNGS/reference_data/influenza_a_virus
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/influenza_a_virus_full_length_NT
+    set ref_dir = ${REF_DIR}/influenza_a_virus
+    set blast_db_dir = ${REF_DIR}/influenza_a_virus_full_length_NT
     set segments = "HA MP NA NP NS PA PB1 PB2"
     set seg_cov = "HA:175000 MP:100000 NA:145000 NP:155000 NS:89000 PA:220000 PB1:235000 PB2:235000"
     set flu_a = 1
   breaksw
   case giv3:
     echo "Using Influenza A reference data for database [${db_name}]"
-    set ref_dir = /usr/local/projects/VHTNGS/reference_data/influenza_a_virus
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/influenza_a_virus_full_length_NT
+    set ref_dir = ${REF_DIR}/influenza_a_virus
+    set blast_db_dir = ${REF_DIR}/influenza_a_virus_full_length_NT
     set segments = "HA MP NA NP NS PA PB1 PB2"
     set seg_cov = "HA:175000 MP:100000 NA:145000 NP:155000 NS:89000 PA:220000 PB1:235000 PB2:235000"
     set flu_a = 1
   breaksw
   case piv:
     echo "Using Influenza A reference data for database [${db_name}]"
-    set ref_dir = /usr/local/projects/VHTNGS/reference_data/influenza_a_virus
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/influenza_a_virus_full_length_NT
+    set ref_dir = ${REF_DIR}/influenza_a_virus
+    set blast_db_dir = ${REF_DIR}/influenza_a_virus_full_length_NT
     set segments = "HA MP NA NP NS PA PB1 PB2"
     set seg_cov = "HA:175000 MP:100000 NA:145000 NP:155000 NS:89000 PA:220000 PB1:235000 PB2:235000"
     set flu_a = 1
   breaksw
   case swiv:
     echo "Using Influenza A reference data for database [${db_name}]"
-    set ref_dir = /usr/local/projects/VHTNGS/reference_data/influenza_a_virus
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/influenza_a_virus_full_length_NT
+    set ref_dir = ${REF_DIR}/influenza_a_virus
+    set blast_db_dir = ${REF_DIR}/influenza_a_virus_full_length_NT
     set segments = "HA MP NA NP NS PA PB1 PB2"
     set seg_cov = "HA:175000 MP:100000 NA:145000 NP:155000 NS:89000 PA:220000 PB1:235000 PB2:235000"
     set flu_a = 1
   breaksw
   case rtv:
     echo "Using Rotavirus reference data for database [${db_name}]"
-    set ref_dir      = /usr/local/projects/VHTNGS/reference_data/rota_virus
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/rota_virus_full_length_NT
+    set ref_dir      = ${REF_DIR}/rota_virus
+    set blast_db_dir = ${REF_DIR}/rota_virus_full_length_NT
     set segments = "VP1 VP2 VP3 VP4 NSP1 VP6 NSP3 NSP2 VP7 NSP4 NSP5"
     set seg_cov = "VP1:326700 VP2:268600 VP3:255000 VP4:232400 NSP1:151800 VP6:132300 NSP3:104100 NSP2:102200 VP7:103000 NSP4:70800 NSP5:62900"
     set flu_a = 0
   breaksw
   case gcv:
     echo "Using Coronavirus reference data for database [${db_name}]"
-    set ref_dir      = /usr/local/projects/VHTNGS/reference_data/corona_virus
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/corona_virus_full_length_NT
+    set ref_dir      = ${REF_DIR}/corona_virus
+    set blast_db_dir = ${REF_DIR}/corona_virus_full_length_NT
     set segments = "MAIN"
     set seg_cov = "MAIN:3000000"
     set flu_a = 0
   breaksw
   case veev:
     echo "Using VEEV reference data for database [${db_name}]"
-    set ref_dir      = /usr/local/projects/VHTNGS/reference_data/veev
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/veev_full_length_NT
+    set ref_dir      = ${REF_DIR}/veev
+    set blast_db_dir = ${REF_DIR}/veev_full_length_NT
     set segments = "MAIN"
     set seg_cov = "MAIN:1200000"
     set flu_a = 0
   breaksw
   case hadv:
     echo "Using HADV reference data for database [${db_name}]"
-    set ref_dir      = /usr/local/projects/VHTNGS/reference_data/hadv
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/hadv_full_length_NT
+    set ref_dir      = ${REF_DIR}/hadv
+    set blast_db_dir = ${REF_DIR}/hadv_full_length_NT
     set segments = "MAIN"
     set seg_cov = "MAIN:4500000"
     set flu_a = 0
   breaksw
   case mpv:
     echo "Using MPV reference data for database [${db_name}]"
-    set ref_dir      = /usr/local/projects/VHTNGS/reference_data/mpv
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/mpv_full_length_NT
+    set ref_dir      = ${REF_DIR}/mpv
+    set blast_db_dir = ${REF_DIR}/mpv_full_length_NT
     set segments = "MAIN"
     set seg_cov = "MAIN:1335000"
     set flu_a = 0
   breaksw
   case norv:
     echo "Using NORV reference data for database [${db_name}]"
-    set ref_dir      = /usr/local/projects/VHTNGS/reference_data/norv
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/norv_full_length_NT
+    set ref_dir      = ${REF_DIR}/norv
+    set blast_db_dir = ${REF_DIR}/norv_full_length_NT
     set segments = "MAIN"
     set seg_cov = "MAIN:774600"
     set flu_a = 0
   breaksw
   case vzv:
     echo "Using VZV reference data for database [${db_name}]"
-    set ref_dir      = /usr/local/projects/VHTNGS/reference_data/vzv
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/vzv_full_length_NT
+    set ref_dir      = ${REF_DIR}/vzv
+    set blast_db_dir = ${REF_DIR}/vzv_full_length_NT
     set segments = "MAIN"
     set seg_cov = "MAIN:12500000"
     set flu_a = 0
   breaksw
   case rsv:
     echo "Using RSV reference data for database [${db_name}]"
-    set ref_dir      = /usr/local/projects/VHTNGS/reference_data/rsv
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/rsv_full_length_NT
+    set ref_dir      = ${REF_DIR}/rsv
+    set blast_db_dir = ${REF_DIR}/rsv_full_length_NT
     set segments = "MAIN"
     set seg_cov = "MAIN:1530000"
     set flu_a = 0
   breaksw
   case jev:
     echo "Using JEV reference data for database [${db_name}]"
-    set ref_dir      = /usr/local/projects/VHTNGS/reference_data/jev
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/jev_full_length_NT
+    set ref_dir      = ${REF_DIR}/jev
+    set blast_db_dir = ${REF_DIR}/jev_full_length_NT
     set segments = "MAIN"
     set seg_cov = "MAIN:1100000"
     set flu_a = 0
   breaksw
   case yfv:
     echo "Using YFV reference data for database [${db_name}]"
-    set ref_dir      = /usr/local/projects/VHTNGS/reference_data/yfv
-    set blast_db_dir = /usr/local/projects/VHTNGS/reference_data/yfv_full_length_NT
+    set ref_dir      = ${REF_DIR}/yfv
+    set blast_db_dir = ${REF_DIR}/yfv_full_length_NT
     set segments = "MAIN"
     set seg_cov = "MAIN:1090000"
     set flu_a = 0
@@ -139,10 +166,9 @@ switch ($db_name)
   breaksw
 endsw
 
-
-echo ${454_orig_sff}
-echo ${sanger_orig_fasta}
-echo ${solexa_orig_fastq}
+echo ${seq454_orig_sff_file}
+echo ${sanger_orig_fasta_file}
+echo ${solexa_orig_fastq_file}
 echo ${db_name}
 echo ${ref_dir}
 echo ${blast_db_dir}
@@ -150,44 +176,31 @@ echo ${segments}
 echo ${seg_cov}
 echo ${flu_a}
 
-: <<'END'
-set sample_data_merged_solexa = ${sample_data}/merged_solexa
-set sample_data_merged_sff = ${sample_data}/merged_sff
-set sample_data_merged_sanger = ${sample_data}/merged_sanger
-set sample_data_merged_solexa_file = ${sample_data_merged_solexa}/${db_name}_${col_name}_${bac_id}.fastq
-set sample_data_merged_solexa_file_t = ${sample_data_merged_solexa}/${db_name}_${col_name}_${bac_id}.fastq.trimpoints
-set sample_data_merged_solexa_file_u = ${sample_data_merged_solexa}/${db_name}_${col_name}_${bac_id}.fastq.untrimmed
-set sample_data_merged_sff_file = ${sample_data_merged_sff}/${db_name}_${col_name}_${bac_id}.sff
-set sample_data_merged_sanger_file = ${sample_data_merged_sanger}/${db_name}_${col_name}_${bac_id}.fasta
-
 echo "INFO: converting sff to fasta"
-touch ${sample_data_merged_sff_file}.fna
-sffinfo -s ${sample_data_merged_sff_file:r}.${key}.sff | grep -v " length=0 " >> ${sample_data_merged_sff_file}.fna 
+touch ${seq454_orig_sff_file}.fna
+${TOOLS_SFF_DIR}/sffinfo -s ${seq454_orig_sff_file} | grep -v " length=0 " >> ${seq454_orig_sff_file}.fna 
 
-if ( `cat ${sample_data_merged_sff_file}.fna | wc -l` > 0 ) then
-  echo "INFO: formatdb of SFF fasta for [${db_name}/${col_name}/${bac_id}]"
-  formatdb -p F -i ${sample_data_merged_sff_file}.fna
+if ( `cat ${seq454_orig_sff_file}.fna | wc -l` > 0 ) then
+  echo "INFO: formatdb of SFF fasta"
+  ${TOOLS_BINARIES_DIR}/formatdb -p F -i ${seq454_orig_sff_file}.fna
 endif
 
-if ( `cat ${sample_data_merged_sanger_file} | wc -l` > 0 ) then
-  echo "INFO: formatdb of Sanger fasta for [${db_name}/${col_name}/${bac_id}]"
-  formatdb -p F -i ${sample_data_merged_sanger_file}
+if ( `cat ${sanger_orig_fasta_file} | wc -l` > 0 ) then
+  echo "INFO: formatdb of Sanger fasta"
+  ${TOOLS_BINARIES_DIR}/formatdb -p F -i ${sanger_orig_fasta_file}
 endif
 
-set tblastx_outdir = ${sample_data}/tblastx_output
-if ( -d ${tblastx_outdir} ) then
-else
-  mkdir -p ${tblastx_outdir}
-endif
+set tblastx_outdir = ${PROJECT_DIR}/tblastx_output
+mkdir -p ${tblastx_outdir}
 
 foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
-  echo "INFO: tblastx segment data [${seg}] against SFF and Sanger reads databases for [${db_name}/${col_name}/${bac_id}]"
+  echo "INFO: tblastx segment data [${seg}] against SFF and Sanger reads databases for [${db_name}]"
   set ref_fna = ${ref_dir}/${seg}.fasta
 
-  if ( `cat ${sample_data_merged_sff_file}.fna | wc -l` > 0 ) then
-    set blastdb = ${sample_data_merged_sff_file}.fna
+  if ( `cat ${seq454_orig_sff_file}.fna | wc -l` > 0 ) then
+    set blastdb = ${seq454_orig_sff_file}.fna
     set blastout = ${tblastx_outdir}/${seg}.out
-    blastall \
+    ${TOOLS_BINARIES_DIR}/blastall \
       -p tblastx \
       -d ${blastdb} \
       -i ${ref_fna} \
@@ -199,10 +212,10 @@ foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
     touch ${blastout}
   endif
 
-  if ( `cat ${sample_data_merged_sanger_file} | wc -l` > 0 ) then
-    set blastdb = ${sample_data_merged_sanger_file}
+  if ( `cat ${sanger_orig_fasta_file} | wc -l` > 0 ) then
+    set blastdb = ${sanger_orig_fasta_file}
     set blastout = ${tblastx_outdir}/${seg}_sanger.out
-    blastall \
+    ${TOOLS_BINARIES_DIR}/blastall \
       -p tblastx \
       -d ${blastdb} \
       -i ${ref_fna} \
@@ -218,7 +231,7 @@ end
 set noninter_chimera_list = ${tblastx_outdir}/noninter_chimera_reads.uaccno_list
 set inter_chimera_list = ${tblastx_outdir}/inter_chimera_reads.uaccno_list
 foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
-  echo "INFO: parsing tblastx output for segment [${seg}] against [${db_name}/${col_name}/${bac_id}]"
+  echo "INFO: parsing tblastx output for segment [${seg}] against [${db_name}]"
   set blastout = ${tblastx_outdir}/${seg}.out
   set blastout_sanger = ${tblastx_outdir}/${seg}_sanger.out
   set nonintra_chimera_list = ${tblastx_outdir}/${seg}_nonintra_chimera_reads.uaccno_list
@@ -267,6 +280,8 @@ cat ${tblastx_outdir}/*_nonintra_chimera_reads.uaccno_list | \
   grep -v " 1 " | \
   gawk '{print $2}' > ${inter_chimera_list}
 
+: << 'END'
+
 foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
   set nonintra_chimera_list = ${tblastx_outdir}/${seg}_nonintra_chimera_reads.uaccno_list
   set non_chimera_list = ${tblastx_outdir}/${seg}_nonchimera_reads.uaccno_list
@@ -274,7 +289,7 @@ foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
     ${noninter_chimera_list} \
     ${nonintra_chimera_list} > \
     ${non_chimera_list}
-  echo "INFO: creating sff of non_chimeric reads from reads matching segment [${seg}] for [${db_name}/${col_name}/${bac_id}]"
+  echo "INFO: creating sff of non_chimeric reads from reads matching segment [${seg}] for [${db_name}]"
 
   set sample_seg_sff_file = ${sample_data_merged_sff}/${db_name}_${col_name}_${bac_id}_nonchimera_${seg}.sff
   foreach key (`ls -1 ${sample_data_merged_sff} | grep "\.[ACGT][ACGT][ACGT][ACGT]\." | cut -d '.' -f 2 | sort -u`)
