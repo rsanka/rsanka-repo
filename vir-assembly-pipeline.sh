@@ -350,6 +350,8 @@ foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
         sort -nrk12 | \
         head -n 1 | \
         gawk '{printf("%s\n", $2);}'`
+      touch /usr/local/VHTNGS/project/best_hits.txt
+      sudo chmod 777 /usr/local/VHTNGS/project/best_hits.txt
       echo "BEST_HIT: ${best_hit}" >> /usr/local/VHTNGS/project/best_hits.txt
       ${TOOLS_BINARIES_DIR}/fastacmd -d ${blast_db} -p F -s "${best_hit}"  -o ${best_reference}
       grep "^>" ${best_reference} | cut -c 2- | gawk -v s=${seg} '{printf(">%s %s\n", s, $0);}' > ${best_reference}_mod
