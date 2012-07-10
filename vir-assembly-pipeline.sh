@@ -292,80 +292,54 @@ foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
   set sample_seg_sff_file = ${seq454_orig_sff_dir}/sample_nonchimera_${seg}.sff
   ${TOOLS_SFF_DIR}/sfffile \
     -i ${non_chimera_list} \
-    -o ${sample_seg_sff_file:r} \
-    ${seq454_orig_sff_file:r}
-  end
+    -o ${sample_seg_sff_file} \
+    ${seq454_orig_sff_file}
 
   set sample_seg_sanger_file = ${sanger_orig_fasta_dir}/sample_nonchimera_${seg}.fasta
   if ( `cat ${sanger_orig_fasta_file} | wc -l` > 0 ) then
-    echo "INFO: creating Sanger fasta of non_chimeric reads from reads matching segment [${seg}] for [${bac_id}]"
+    echo "INFO: creating Sanger fasta of non_chimeric reads from reads matching segment [${seg}]"
     ${TOOLS_SFF_DIR}/fnafile \
       -i ${non_chimera_list} \
       -o ${sample_seg_sanger_file} \
       ${sanger_orig_fasta_file}
   endif
 
-  echo "INFO: creating 100x max coverage sff of non_chimeric reads from reads matching segment [${seg}] for [${bac_id}]"
+  echo "INFO: creating 100x max coverage sff of non_chimeric reads from reads matching segment [${seg}]"
   set bps = `echo ${seg_cov} | tr ' ' '\n' | grep ${seg} | cut -d ':' -f 2`
   set sample_seg_100x_sff_file = ${seq454_orig_sff_dir}/sample_nonchimera_${seg}_100x.sff
   ${TOOLS_SFF_DIR}/sfffile \
     -pick ${bps} \
-    -o ${sample_seg_100x_sff_file:r} \
-    ${sample_seg_sff_file:r}
+    -o ${sample_seg_100x_sff_file} \
+    ${sample_seg_sff_file}
   end
 
   set seg_assembly_dir = ${PROJECT_DIR}/assembly_by_segment/${seg}
   mkdir -p ${seg_assembly_dir}
 
-: << 'END'
-
   pushd ${seg_assembly_dir} >& /dev/null
-    echo "INFO: performing de novo assembly of 100x coverage for nonchimera reads from segment [${seg}] for [${db_name}/${col_name}/${bac_id}]"
-
-    ln -s /usr/local/packages/clc-bfx-cell/license.properties ./
-
-    set input_read_files = ""
-    foreach key (`ls -1 ${sample_data_merged_sff} | grep "\.[ACGT][ACGT][ACGT][ACGT]\." | cut -d '.' -f 2 | sort -u`)
-      set input_read_files = `echo "${input_read_files} -q ${sample_seg_100x_sff_file:r}.${key}.sff"`
-    end
+    echo "INFO: performing de novo assembly of 100x coverage for nonchimera reads from segment [${seg}] for [${db_name}]"
+    if ( -e sample_nonchimera_${seg}_100x.fasta ) then
+      rm sample_nonchimera_${seg}_100x.fasta
+    endif
+    touch sample_nonchimera_${seg}_100x.fasta
+    ${TOOLS_SFF_DIR}/sffinfo \
+      -s ${sample_seg_100x_sff_file} | \
+      grep -v " length=0 " \
+      >> sample_nonchimera_${seg}_100x.fasta
     if ( -e ${sample_seg_sanger_file} ) then
-      if ( `cat ${sample_seg_sanger_file} | wc -l` > 0 ) then
-        set input_read_files = `echo "${input_read_files} -q ${sample_seg_sanger_file}"`
-      endif
+      cat ${sample_seg_sanger_file} >> sample_nonchimera_${seg}_100x.fasta
     endif
-    clc_novo_assemble \
-      -o ${seg}_100x_contigs.fasta \
-      ${input_read_files} \
-      >& ${seg}_100x_clc_novo_assemble.log
-
-    set contig_cnt = `grep "^>" ${seg}_100x_contigs.fasta | wc -l`
-    if ( ${contig_cnt} < 1 ) then
-      echo "WARNING: clc de novo assembly of 100x coverage failed, trying cap3 for nonchimera reads from segment [${seg}] for [${db_name}/${col_name}/${bac_id}]"
-      if ( -e ${db_name}_${col_name}_${bac_id}_nonchimera_${seg}_100x.fasta ) then
-        rm ${db_name}_${col_name}_${bac_id}_nonchimera_${seg}_100x.fasta
-      endif
-      touch ${db_name}_${col_name}_${bac_id}_nonchimera_${seg}_100x.fasta
-      foreach key (`ls -1 ${sample_data_merged_sff} | grep "\.[ACGT][ACGT][ACGT][ACGT]\." | cut -d '.' -f 2 | sort -u`)
-        sffinfo \
-          -s ${sample_seg_100x_sff_file:r}.${key}.sff | \
-          grep -v " length=0 " \
-          >> ${db_name}_${col_name}_${bac_id}_nonchimera_${seg}_100x.fasta
-      end
-      if ( -e ${sample_seg_sanger_file} ) then
-        cat ${sample_seg_sanger_file} >> ${db_name}_${col_name}_${bac_id}_nonchimera_${seg}_100x.fasta
-      endif
-
-      cap3 ${db_name}_${col_name}_${bac_id}_nonchimera_${seg}_100x.fasta
-      mv ${db_name}_${col_name}_${bac_id}_nonchimera_${seg}_100x.fasta.cap.contigs ${seg}_100x_contigs.fasta
-      rm ${db_name}_${col_name}_${bac_id}_nonchimera_${seg}_100x.fasta*
-    endif
+    
+    /usr/local/bin/cap3 sample_nonchimera_${seg}_100x.fasta
+    mv sample_nonchimera_${seg}_100x.fasta.cap.contigs ${seg}_100x_contigs.fasta
+    rm sample_nonchimera_${seg}_100x.fasta*
     
     set blast_db = ${blast_db_dir}/${seg}_full_length_NT_complete.fa
     set best_reference = ${seg_assembly_dir}/${seg}_best_reference.fna
     if ( -e ${seg}_100x_contigs.fasta ) then
       echo "INFO: finding best FL reference for segment [${seg}] for [${db_name}/${col_name}/${bac_id}]"
       set best_hit = \
-        `blastall \
+        `${TOOLS_BINARIES_DIR}/blastall \
            -p blastn \
            -d ${blast_db} \
            -b 1 \
@@ -376,15 +350,17 @@ foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
         sort -nrk12 | \
         head -n 1 | \
         gawk '{printf("%s\n", $2);}'`
-      fastacmd -d ${blast_db} -p F -s "${best_hit}"  -o ${best_reference}
+      ${TOOLS_BINARIES_DIR}/fastacmd -d ${blast_db} -p F -s "${best_hit}"  -o ${best_reference}
       grep "^>" ${best_reference} | cut -c 2- | gawk -v s=${seg} '{printf(">%s %s\n", s, $0);}' > ${best_reference}_mod
       grep -v "^>" ${best_reference} >> ${best_reference}_mod
       mv ${best_reference}_mod ${best_reference}
     else
-      echo "ERROR: missing de novo assembly of 100x coverage for nonchimera reads from segment [${seg}] for [${db_name}/${col_name}/${bac_id}]"
+      echo "ERROR: missing de novo assembly of 100x coverage for nonchimera reads from segment [${seg}] for [${db_name}]"
     endif
   popd >& /dev/null
 end
+
+: << 'END'
 
 echo "INFO: consolidating best FL reference sequences for [${db_name}/${col_name}/${bac_id}]"
 set seg_best_ref_dir = ${sample_data}/reference_fasta
