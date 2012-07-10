@@ -69,6 +69,8 @@ def _initialize_bio_linux():
     _apt_get_install("samtools")
     _apt_get_install("bio-linux-cap3")
     _apt_get_install("emboss")
+    _apt_get_install("csh")
+    _apt_get_install("gawk")
 
 def _untar(install_dir,tarball):
     sudo("tar xfz %s/%s -C %s" % (install_dir,tarball,install_dir))

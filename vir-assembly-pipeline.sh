@@ -3,7 +3,7 @@
 set seq454_orig_sff = $1
 set sanger_orig_fasta = $2
 set solexa_orig_fastq = $3
-set db_name_input = $4
+set db_name = $4
 
 set ROOT_DIR = "/usr/local/VHTNGS"
 set PROJECT_DIR = "${ROOT_DIR}/project"
@@ -280,8 +280,6 @@ cat ${tblastx_outdir}/*_nonintra_chimera_reads.uaccno_list | \
   grep -v " 1 " | \
   gawk '{print $2}' > ${inter_chimera_list}
 
-: << 'END'
-
 foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
   set nonintra_chimera_list = ${tblastx_outdir}/${seg}_nonintra_chimera_reads.uaccno_list
   set non_chimera_list = ${tblastx_outdir}/${seg}_nonchimera_reads.uaccno_list
@@ -291,38 +289,35 @@ foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
     ${non_chimera_list}
   echo "INFO: creating sff of non_chimeric reads from reads matching segment [${seg}] for [${db_name}]"
 
-  set sample_seg_sff_file = ${sample_data_merged_sff}/${db_name}_${col_name}_${bac_id}_nonchimera_${seg}.sff
-  foreach key (`ls -1 ${sample_data_merged_sff} | grep "\.[ACGT][ACGT][ACGT][ACGT]\." | cut -d '.' -f 2 | sort -u`)
-    sfffile \
-      -i ${non_chimera_list} \
-      -o ${sample_seg_sff_file:r}.${key}.sff \
-      ${sample_data_merged_sff_file:r}.${key}.sff
+  set sample_seg_sff_file = ${seq454_orig_sff_dir}/sample_nonchimera_${seg}.sff
+  ${TOOLS_SFF_DIR}/sfffile \
+    -i ${non_chimera_list} \
+    -o ${sample_seg_sff_file:r} \
+    ${seq454_orig_sff_file:r}
   end
 
-  set sample_seg_sanger_file = ${sample_data_merged_sanger}/${db_name}_${col_name}_${bac_id}_nonchimera_${seg}.fasta
-  if ( `cat ${sample_data_merged_sanger_file} | wc -l` > 0 ) then
-    echo "INFO: creating Sanger fasta of non_chimeric reads from reads matching segment [${seg}] for [${db_name}/${col_name}/${bac_id}]"
-    fnafile \
+  set sample_seg_sanger_file = ${sanger_orig_fasta_dir}/sample_nonchimera_${seg}.fasta
+  if ( `cat ${sanger_orig_fasta_file} | wc -l` > 0 ) then
+    echo "INFO: creating Sanger fasta of non_chimeric reads from reads matching segment [${seg}] for [${bac_id}]"
+    ${TOOLS_SFF_DIR}/fnafile \
       -i ${non_chimera_list} \
       -o ${sample_seg_sanger_file} \
-      ${sample_data_merged_sanger_file}
+      ${sanger_orig_fasta_file}
   endif
 
-  echo "INFO: creating 100x max coverage sff of non_chimeric reads from reads matching segment [${seg}] for [${db_name}/${col_name}/${bac_id}]"
+  echo "INFO: creating 100x max coverage sff of non_chimeric reads from reads matching segment [${seg}] for [${bac_id}]"
   set bps = `echo ${seg_cov} | tr ' ' '\n' | grep ${seg} | cut -d ':' -f 2`
-  set sample_seg_100x_sff_file = ${sample_data_merged_sff}/${db_name}_${col_name}_${bac_id}_nonchimera_${seg}_100x.sff
-  foreach key (`ls -1 ${sample_data_merged_sff} | grep "\.[ACGT][ACGT][ACGT][ACGT]\." | cut -d '.' -f 2 | sort -u`)
-    sfffile \
-      -pick ${bps} \
-      -o ${sample_seg_100x_sff_file:r}.${key}.sff \
-      ${sample_seg_sff_file:r}.${key}.sff
+  set sample_seg_100x_sff_file = ${seq454_orig_sff_dir}/sample_nonchimera_${seg}_100x.sff
+  ${TOOLS_SFF_DIR}/sfffile \
+    -pick ${bps} \
+    -o ${sample_seg_100x_sff_file:r} \
+    ${sample_seg_sff_file:r}
   end
 
-  set seg_assembly_dir = ${sample_data}/assembly_by_segment/${seg}
-  if ( -d ${seg_assembly_dir} ) then
-  else
-    mkdir -p ${seg_assembly_dir}
-  endif
+  set seg_assembly_dir = ${PROJECT_DIR}/assembly_by_segment/${seg}
+  mkdir -p ${seg_assembly_dir}
+
+: << 'END'
 
   pushd ${seg_assembly_dir} >& /dev/null
     echo "INFO: performing de novo assembly of 100x coverage for nonchimera reads from segment [${seg}] for [${db_name}/${col_name}/${bac_id}]"
