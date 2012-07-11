@@ -351,34 +351,24 @@ foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
   popd >& /dev/null
 end
 
-: << 'END'
-
-echo "INFO: consolidating best FL reference sequences for [${db_name}/${col_name}/${bac_id}]"
+echo "INFO: consolidating best FL reference sequences for [${db_name}]"
 set seg_best_ref_dir = ${sample_data}/reference_fasta
-if ( -d ${seg_best_ref_dir} ) then
-else
-  mkdir -p ${seg_best_ref_dir}
-endif
+mkdir -p ${seg_best_ref_dir}
 set best_refs_file = ${seg_best_ref_dir}/reference.fasta
 cat ${sample_data}/assembly_by_segment/*/*_best_reference.fna > ${best_refs_file}
 
-echo "INFO: consolidating nonchimera 454 reads for [${db_name}/${col_name}/${bac_id}]"
+echo "INFO: consolidating nonchimera 454 reads for [${db_name}]"
 set non_chimera_list = ${tblastx_outdir}/nonchimera_reads.uaccno_list
 cat ${tblastx_outdir}/*_nonchimera_reads.uaccno_list > ${non_chimera_list}
 
-set deconvolved_sff = ${sample_data_merged_sff}/${db_name}_${col_name}_${bac_id}_nonchimera.sff
-foreach key (`ls -1 ${sample_data_merged_sff} | grep "\.[ACGT][ACGT][ACGT][ACGT]\." | cut -d '.' -f 2 | sort -u`)
-  sfffile -i ${non_chimera_list} \
-    -o ${deconvolved_sff:r}.${key}.sff \
-    ${sample_data_merged_sff_file:r}.${key}.sff
-end
+set deconvolved_sff = ${seq454_orig_sff_dir}/sample_nonchimera.sff
+${TOOLS_SFF_DIR}/sfffile -i ${non_chimera_list} -o ${deconvolved_sff} ${seq454_orig_sff_file}
 
-echo "INFO: mapping viral sequences for [${db_name}/${col_name}/${bac_id}]"
-set sample_mapping_dir = ${sample_data}/mapping
-if ( -d ${sample_mapping_dir} ) then
-else
-  mkdir -p ${sample_mapping_dir}
-endif
+echo "INFO: mapping viral sequences for [${db_name}]"
+set sample_mapping_dir = ${PROJECT_DIR}/mapping
+mkdir -p ${sample_mapping_dir}
+
+: << 'END'
 
 pushd ${sample_mapping_dir} >& /dev/null
   ln -s /usr/local/packages/clc-bfx-cell/license.properties ./
@@ -599,4 +589,6 @@ pushd ${sample_mapping_dir} >& /dev/null
     -o ${db_name}_${col_name}_${bac_id}_hybrid_edited_refs.new_contigs \
     -v \
     -f 0.2 >& ${db_name}_${col_name}_${bac_id}_hybrid_edited_refs_find_variations.log
+    
+popd >& /dev/null
 END
