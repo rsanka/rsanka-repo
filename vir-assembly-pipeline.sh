@@ -1,4 +1,5 @@
 #!/bin/csh
+umask 002
 
 set seq454_orig_sff = $1
 set sanger_orig_fasta = $2
@@ -337,21 +338,9 @@ foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
     set best_reference = ${seg_assembly_dir}/${seg}_best_reference.fna
     if ( -e ${seg}_100x_contigs.fasta ) then
       echo "INFO: finding best FL reference for segment [${seg}] for [${db_name}]"
-      set best_hit = \
-        `${TOOLS_BINARIES_DIR}/blastall \
-           -p blastn \
-           -d ${blast_db} \
-           -b 1 \
-           -v 1 \
-           -m 8 \
-           -i ${seg}_100x_contigs.fasta | \
-        gawk -F'\t' '{printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);}' | \
-        sort -nrk12 | \
-        head -n 1 | \
-        gawk '{printf("%s\n", $2);}'`
-      touch /usr/local/VHTNGS/project/best_hits.txt
-      chmod 777 /usr/local/VHTNGS/project/best_hits.txt
-      echo "BEST_HIT: ${best_hit}" >> /usr/local/VHTNGS/project/best_hits.txt
+      set best_hit = `${TOOLS_BINARIES_DIR}/blastall -p blastn -d ${blast_db} -b 1 -v 1 -m 8 -i ${seg}_100x_contigs.fasta | gawk -F'\t' '{printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);}' | sort -nrk12 | head -n 1 | gawk '{printf("%s\n", $2);}'`
+      touch ${best_reference}
+      chmod 755 ${best_reference}
       ${TOOLS_BINARIES_DIR}/fastacmd -d ${blast_db} -p F -s "${best_hit}"  -o ${best_reference}
       grep "^>" ${best_reference} | cut -c 2- | gawk -v s=${seg} '{printf(">%s %s\n", s, $0);}' > ${best_reference}_mod
       grep -v "^>" ${best_reference} >> ${best_reference}_mod
