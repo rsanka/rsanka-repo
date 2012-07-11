@@ -352,10 +352,10 @@ foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
 end
 
 echo "INFO: consolidating best FL reference sequences for [${db_name}]"
-set seg_best_ref_dir = ${sample_data}/reference_fasta
+set seg_best_ref_dir = ${PROJECT_DIR}/reference_fasta
 mkdir -p ${seg_best_ref_dir}
 set best_refs_file = ${seg_best_ref_dir}/reference.fasta
-cat ${sample_data}/assembly_by_segment/*/*_best_reference.fna > ${best_refs_file}
+cat ${PROJECT_DIR}/assembly_by_segment/*/*_best_reference.fna > ${best_refs_file}
 
 echo "INFO: consolidating nonchimera 454 reads for [${db_name}]"
 set non_chimera_list = ${tblastx_outdir}/nonchimera_reads.uaccno_list
@@ -368,39 +368,23 @@ echo "INFO: mapping viral sequences for [${db_name}]"
 set sample_mapping_dir = ${PROJECT_DIR}/mapping
 mkdir -p ${sample_mapping_dir}
 
-: << 'END'
-
 pushd ${sample_mapping_dir} >& /dev/null
-  ln -s /usr/local/packages/clc-bfx-cell/license.properties ./
+  set deconvolved_sff_fna = ${deconvoled_sff}.".fna"
+  
+  echo "INFO: converting non-chimeric sff to fasta"
+  touch ${deconvoled_sff_fna}
+  ${TOOLS_SFF_DIR}/sffinfo -s ${deconvoled_sff} | grep -v " length=0 " >> ${deconvolved_sff_fna}
+  
+  echo "INFO: using BOWTIE and SAMTOOLS to find sff SNPs for [${db_name}]"
+  /usr/bin/bowtie-build ${best_refs_file} BEST_REFS
+  /usr/bin/bowtie -S -f BEST_REFS ${deconvolved_sff_fna} sample_454_only_gb_refs.sam
+  /usr/bin/samtools view -bS -o sample_454_only_gb_refs.bam sample_454_only_gb_refs.sam
+  /usr/bin/samtools sort sample_454_only_gb_refs.bam sample_454_only_gb_refs.sorted
+  /usr/bin/samtools mpileup -ugf ${best_refs_file} sample_454_only_gb_refs.sorted.bam | /usr/bin/bcftools view -bvcg - > sample_454_only_gb_refs.raw.bcf
+  /usr/bin/bcftools view sample_454_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_454_only_gb_refs.SNPs.txt
+popd >& /dev/null
 
-  set sff_exists = 0
-  set input_read_files = ""
-  foreach key (`ls -1 ${sample_data_merged_sff} | grep "\.[ACGT][ACGT][ACGT][ACGT]\." | cut -d '.' -f 2 | sort -u`)
-    set input_read_files = `echo "${input_read_files} -q ${deconvolved_sff:r}.${key}.sff"`
-    set sff_exists = 1
-  end
-
-  touch ${db_name}_${col_name}_${bac_id}_454_only_gb_refs_find_variations.log
-  if ( ${sff_exists} > 0 ) then
-    echo "INFO: using clc_ref_assemble_long to find sff SNPs for [${db_name}_${col_name}_${bac_id}]"
-    clc_ref_assemble_long \
-      -s 0.95 \
-      -o ${db_name}_${col_name}_${bac_id}_454_only_gb_refs.cas \
-      ${input_read_files} \
-      -d ${best_refs_file}
-    find_variations \
-      -a ${db_name}_${col_name}_${bac_id}_454_only_gb_refs.cas \
-      -c 2 \
-      -o ${db_name}_${col_name}_${bac_id}_454_only_gb_refs.new_contigs \
-      -v \
-      -f 0.2 >& ${db_name}_${col_name}_${bac_id}_454_only_gb_refs_find_variations.log
-  endif
-  cat ${db_name}_${col_name}_${bac_id}_454_only_gb_refs_find_variations.log | \
-    grep -v Nochange | \
-    cut -d ':' -f 1 | \
-    gawk '{if($0 ~ /^[A-Z]/){s=$1;n=0; } \
-           else if ($0 ~ /Difference/){l=$1; c=$5; n=0; printf("%s:%d:%s\n", s, l, c);}}' > \
-    ${db_name}_${col_name}_${bac_id}_454_only_gb_refs_find_variations.log.reduced
+: << 'END'
 
   touch ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs_find_variations.log.reduced
   if ( `cat ${sample_data_merged_solexa_file} | wc -l` > 0 ) then
