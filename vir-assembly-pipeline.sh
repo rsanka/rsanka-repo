@@ -386,7 +386,7 @@ pushd ${sample_mapping_dir} >& /dev/null
   /usr/bin/samtools sort sample_454_only_gb_refs.bam sample_454_only_gb_refs.sorted
   /usr/bin/samtools mpileup -ugf ${best_refs_file} sample_454_only_gb_refs.sorted.bam | /usr/bin/bcftools view -bvcg - > sample_454_only_gb_refs.raw.bcf
   /usr/bin/bcftools view sample_454_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_454_only_gb_refs.SNPs.txt
-  sudo grep -v "^#" sample_454_only_gb_refs.SNPs.txt | gawk -F'\t' '{printf("%s:%s:%s\n",$1,$2,$5);}' > sample_454_only_gb_refs.SNPs.reduced.txt
+  grep -v "^#" sample_454_only_gb_refs.SNPs.txt | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_454_only_gb_refs.SNPs.reduced.txt
 
   echo "INFO: converting solexa to fasta"
   touch ${solexa_orig_fastq_fna_file}
@@ -398,7 +398,7 @@ pushd ${sample_mapping_dir} >& /dev/null
   /usr/bin/samtools sort sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sorted
   /usr/bin/samtools mpileup -ugf ${best_refs_file} sample_solexa_only_gb_refs.sorted.bam | /usr/bin/bcftools view -bvcg - > sample_solexa_only_gb_refs.raw.bcf
   /usr/bin/bcftools view sample_solexa_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_solexa_only_gb_refs.SNPs.txt
-  sudo grep -v "^#" sample_solexa_only_gb_refs.SNPs.txt | gawk -F'\t' '{printf("%s:%s:%s\n",$1,$2,$5);}' > sample_solexa_only_gb_refs.SNPs.reduced.txt
+  grep -v "^#" sample_solexa_only_gb_refs.SNPs.txt | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_solexa_only_gb_refs.SNPs.reduced.txt
 
 popd >& /dev/null
 
