@@ -14,6 +14,7 @@ set TOOLS_BINARIES_DIR = "${TOOLS_DIR}/BINARIES"
 set TOOLS_PERL_DIR = "${TOOLS_DIR}/PERL"
 set TOOLS_RUBYDIR_DIR = "${TOOLS_DIR}/RUBYLIB"
 set TOOLS_SFF_DIR = "${TOOLS_DIR}/SFF"
+set TOOLS_FASTX_DIR = "${TOOLS_DIR}/FASTX"
 
 cd ${PROJECT_DIR}
 
@@ -369,44 +370,39 @@ set sample_mapping_dir = ${PROJECT_DIR}/mapping
 mkdir -p ${sample_mapping_dir}
 
 pushd ${sample_mapping_dir} >& /dev/null
-  set deconvolved_sff_fna = ${deconvoled_sff}.".fna"
+  set deconvolved_sff_fna = ${deconvolved_sff}.fna
+  set solexa_orig_fastq_fna_file = ${solexa_orig_fastq_file}.fna
   
   echo "INFO: converting non-chimeric sff to fasta"
-  touch ${deconvoled_sff_fna}
-  ${TOOLS_SFF_DIR}/sffinfo -s ${deconvoled_sff} | grep -v " length=0 " >> ${deconvolved_sff_fna}
+  touch ${deconvolved_sff_fna}
+  ${TOOLS_SFF_DIR}/sffinfo -s ${deconvolved_sff} | grep -v " length=0 " >> ${deconvolved_sff_fna}
   
-  echo "INFO: using BOWTIE and SAMTOOLS to find sff SNPs for [${db_name}]"
+  echo "INFO: bowtie-build on best references fasta"
   /usr/bin/bowtie-build ${best_refs_file} BEST_REFS
+
+  echo "INFO: using BOWTIE and SAMTOOLS to find sff SNPs for [${db_name}]"
   /usr/bin/bowtie -S -f BEST_REFS ${deconvolved_sff_fna} sample_454_only_gb_refs.sam
   /usr/bin/samtools view -bS -o sample_454_only_gb_refs.bam sample_454_only_gb_refs.sam
   /usr/bin/samtools sort sample_454_only_gb_refs.bam sample_454_only_gb_refs.sorted
   /usr/bin/samtools mpileup -ugf ${best_refs_file} sample_454_only_gb_refs.sorted.bam | /usr/bin/bcftools view -bvcg - > sample_454_only_gb_refs.raw.bcf
   /usr/bin/bcftools view sample_454_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_454_only_gb_refs.SNPs.txt
+  sudo grep -v "^#" sample_454_only_gb_refs.SNPs.txt | gawk -F'\t' '{printf("%s:%s:%s\n",$1,$2,$5);}' > sample_454_only_gb_refs.SNPs.reduced.txt
+
+  echo "INFO: converting solexa to fasta"
+  touch ${solexa_orig_fastq_fna_file}
+  ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -i ${solexa_orig_fastq_file} -o ${solexa_orig_fastq_fna_file}
+  
+  echo "INFO: using BOWTIE and SAMTOOLS to find fastq SNPs for [${db_name}]"
+  /usr/bin/bowtie -S -f BEST_REFS ${solexa_orig_fastq_fna_file} sample_solexa_only_gb_refs.sam
+  /usr/bin/samtools view -bS -o sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sam
+  /usr/bin/samtools sort sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sorted
+  /usr/bin/samtools mpileup -ugf ${best_refs_file} sample_solexa_only_gb_refs.sorted.bam | /usr/bin/bcftools view -bvcg - > sample_solexa_only_gb_refs.raw.bcf
+  /usr/bin/bcftools view sample_solexa_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_solexa_only_gb_refs.SNPs.txt
+  sudo grep -v "^#" sample_solexa_only_gb_refs.SNPs.txt | gawk -F'\t' '{printf("%s:%s:%s\n",$1,$2,$5);}' > sample_solexa_only_gb_refs.SNPs.reduced.txt
+
 popd >& /dev/null
 
 : << 'END'
-
-  touch ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs_find_variations.log.reduced
-  if ( `cat ${sample_data_merged_solexa_file} | wc -l` > 0 ) then
-    echo "INFO: using clc_ref_assemble_long to find fastq SNPs for [${db_name}_${col_name}_${bac_id}]"
-    clc_ref_assemble_long \
-      -s 0.95 \
-      -o ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs.cas \
-      -q ${sample_data_merged_solexa_file} \
-      -d ${best_refs_file}
-    find_variations \
-      -a ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs.cas \
-      -c 2 \
-      -o ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs.new_contigs \
-      -v \
-      -f 0.2 >& ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs_find_variations.log
-    cat ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs_find_variations.log | \
-      grep -v Nochange | \
-      cut -d ':' -f 1 | \
-      gawk '{if($0 ~ /^[A-Z]/){s=$1;n=0; } \
-             else if ($0 ~ /Difference/){l=$1; c=$5; n=0; printf("%s:%d:%s\n", s, l, c);}}' > \
-      ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs_find_variations.log.reduced
-  endif
 
   if ( ${sff_exists} > 0 ) then
     if ( `cat ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs_find_variations.log.reduced | wc -l` > 0 ) then
