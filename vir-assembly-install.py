@@ -28,6 +28,7 @@ def _define_dirs():
     directories["TOOLS_BINARIES_DIR"] = "%s/BINARIES" % directories["TOOLS_DIR"]
     directories["TOOLS_PERL_DIR"] = "%s/PERL" % directories["TOOLS_DIR"]
     directories["TOOLS_RUBYLIB_DIR"] = "%s/RUBYLIB" % directories["TOOLS_DIR"]
+    directories["TOOLS_FASTX_DIR"] = "%s/FASTX" % directories["TOOLS_DIR"]
 
 def _print_env_variables():
     print("user:                %(user)s" % env)
@@ -40,40 +41,43 @@ def _initialize_dirs():
         sudo("mkdir -p %s" % directories[name])
 
 def _add_tools():
-    _add_tarball(env.BINARIES_URL,env.BINARIES_TARBALL,directories["TOOLS_BINARIES_DIR"])
-    _add_tarball(env.PERL_URL,env.PERL_TARBALL,directories["TOOLS_PERL_DIR"])
-    _add_tarball(env.RUBYLIB_URL,env.RUBYLIB_TARBALL,directories["TOOLS_RUBYLIB_DIR"])
+    _add_tarball(env.BINARIES_URL,env.BINARIES_TARBALL,directories["TOOLS_BINARIES_DIR"],"xfz")
+    _add_tarball(env.PERL_URL,env.PERL_TARBALL,directories["TOOLS_PERL_DIR"],"xfz")
+    _add_tarball(env.RUBYLIB_URL,env.RUBYLIB_TARBALL,directories["TOOLS_RUBYLIB_DIR"],"xfz")
+    _apt_get_install("csh")
+    _apt_get_install("gawk")
+    _add_fastx()
     _initialize_bio_linux()
 
 def _add_refs():
     files = (env.REF_FILES).split(",")
     for file in files:
-        _add_tarball("%s/%s.tgz" % (env.REF_URL,file),file,directories["REF_DIR"])
+        _add_tarball("%s/%s.tgz" % (env.REF_URL,file),file,directories["REF_DIR"],"xfz")
 
 def _chmod(path):
     sudo("chmod -R 755 %s" % path)
 
-def _add_tarball(download_url,tarball,install_dir):
-    print("du: %s" % download_url)
-    print("tf: %s" % tarball)
-    print("id: %s" % install_dir)
+def _add_tarball(download_url,tarball,install_dir,options):
     sudo("wget --no-check-certificate -O %s %s" % (tarball,download_url))
     sudo("mv %s %s" % (tarball,install_dir))
-    _untar(install_dir,tarball)
+    _untar(install_dir,tarball,options)
+
+def _add_fastx():
+    _add_tarball(env.FASTX_URL,env.FASTX_TARBALL,directories["TOOLS_FASTX_DIR"],"xfj")
+    sudo("cp %s/bin/* %s" % (directories["TOOLS_FASTX_DIR"],directories["TOOLS_FASTX_DIR"]))
+    sudo("rm -fr %s/bin %s/%s" % (directories["TOOLS_FASTX_DIR"],directories["TOOLS_FASTX_DIR"],env.FASTX_TARBALL))
 
 def _initialize_bio_linux():
-    sudo("echo -e \"deb http://nebc.nerc.ac.uk/bio-linux/ unstable bio-linux\" >> /etc/apt/sources.list")
+    sudo("echo -e \"deb %s unstable bio-linux\" >> /etc/apt/sources.list" % env.BIO_LINUX_URL)
     sudo("sudo apt-get update")
     sudo("sudo apt-get install bio-linux-keyring")
     _apt_get_install("bowtie")
     _apt_get_install("samtools")
     _apt_get_install("bio-linux-cap3")
     _apt_get_install("emboss")
-    _apt_get_install("csh")
-    _apt_get_install("gawk")
 
-def _untar(install_dir,tarball):
-    sudo("tar xfz %s/%s -C %s" % (install_dir,tarball,install_dir))
+def _untar(install_dir,tarball,options):
+    sudo("tar %s %s/%s -C %s" % (options,install_dir,tarball,install_dir))
 
 def _apt_get_install(tool):
     sudo("apt-get install %s" % tool)
