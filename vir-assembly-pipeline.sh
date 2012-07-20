@@ -400,44 +400,44 @@ pushd ${sample_mapping_dir} >& /dev/null
   /usr/bin/bcftools view sample_solexa_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_solexa_only_gb_refs.SNPs.txt
   grep -v "^#" sample_solexa_only_gb_refs.SNPs.txt | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_solexa_only_gb_refs.SNPs.reduced.txt
   
-  if ( `cat ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs_find_variations.log.reduced | wc -l` > 0 ) then
+  if ( `cat sample_solexa_only_gb_refs.SNPs.log.reduced.txt | wc -l` > 0 ) then
       sdiff \
-      ${db_name}_${col_name}_${bac_id}_454_only_gb_refs_find_variations.log.reduced \
-      ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs_find_variations.log.reduced | \
+      sample_454_only_gb_refs.SNPs.log.reduced.txt \
+      sample_solexa_only_gb_refs.SNPs.log.reduced.txt | \
       grep -v "[<|>]" | \
       cut -f 1 > \
-      ${db_name}_${col_name}_${bac_id}_454_solexa_common_gb_refs_find_variations.log.reduced
+      sample_454_solexa_common_gb_refs.SNPs.log.reduced.txt
   else
       cp \
-      ${db_name}_${col_name}_${bac_id}_454_only_gb_refs_find_variations.log.reduced \
-      ${db_name}_${col_name}_${bac_id}_454_solexa_common_gb_refs_find_variations.log.reduced
+      sample_454_only_gb_refs.SNPs.log.reduced.txt \
+      sample_454_solexa_common_gb_refs.SNPs.log.reduced.txt
   endif
 
-popd >& /dev/null
-: << 'END'
-
-  echo "INFO: building edited references based on common sff and fastq SNPs for [${db_name}_${col_name}_${bac_id}]"
+  echo "INFO: building edited references based on common sff and fastq SNPs for [${db_name}]"
   foreach seg ( `grep "^>" ${best_refs_file} | cut -d ' ' -f 1 | cut -c 2-` )
     nthseq -sequence ${best_refs_file} \
       -number `grep "^>" ${best_refs_file} | cut -d ' ' -f 1 | cut -c 2- | grep -n ${seg} | cut -d ':' -f 1` \
-      -outseq ${db_name}_${col_name}_${bac_id}_${seg}.extracted >& /dev/null
-    cat ${db_name}_${col_name}_${bac_id}_454_solexa_common_gb_refs_find_variations.log.reduced | \
+      -outseq sample_${seg}.extracted >& /dev/null
+    cat sample_454_solexa_common_gb_refs.SNPs.reduced.txt | \
       grep ${seg} | \
       cut -d ':' -f 2-3 | \
-      tr '\n ' ' ' > ${db_name}_${col_name}_${bac_id}_${seg}.edits
-    /usr/local/devel/DAS/software/resequencing/prod/data_analysis/delta2seq.pl \
-      -r ${db_name}_${col_name}_${bac_id}_${seg}.extracted \
-      -f ${db_name}_${col_name}_${bac_id}_${seg}.edits \
-      -q ${db_name}_${col_name}_${bac_id}_${seg}.extracted.edited
-    grep "^>" ${db_name}_${col_name}_${bac_id}_${seg}.extracted > \
-      ${db_name}_${col_name}_${bac_id}_${seg}.extracted.edited.fasta
-    grep -v "^>" ${db_name}_${col_name}_${bac_id}_${seg}.extracted.edited >> \
-      ${db_name}_${col_name}_${bac_id}_${seg}.extracted.edited.fasta
+      tr '\n ' ' ' > sample_${seg}.edits
+    ${TOOLS_PERL_DIR}/delta2seq.pl \
+      -r sample_${seg}.extracted \
+      -f sample_${seg}.edits \
+      -q sample_${seg}.extracted.edited
+    grep "^>" sample_${seg}.extracted > \
+      sample_${seg}.extracted.edited.fasta
+    grep -v "^>" sample_${seg}.extracted.edited >> \
+      sample_${seg}.extracted.edited.fasta
   end
-  set best_edited_refs_file = ${db_name}_${col_name}_${bac_id}_reference_edited.fasta
-  cat ${db_name}_${col_name}_${bac_id}_*.extracted.edited.fasta > \
+  set best_edited_refs_file = sample_reference_edited.fasta
+  cat sample_*.extracted.edited.fasta > \
     ${best_edited_refs_file}
-
+  
+popd >& /dev/null
+: << 'END'
+  
   echo "INFO: using 454 mapper for final chimera check for [${db_name}_${col_name}_${bac_id}]"
 
   if ( -d 454_mapping_best_refs_chimera_check ) then
