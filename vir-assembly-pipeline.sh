@@ -399,29 +399,22 @@ pushd ${sample_mapping_dir} >& /dev/null
   /usr/bin/samtools mpileup -ugf ${best_refs_file} sample_solexa_only_gb_refs.sorted.bam | /usr/bin/bcftools view -bvcg - > sample_solexa_only_gb_refs.raw.bcf
   /usr/bin/bcftools view sample_solexa_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_solexa_only_gb_refs.SNPs.txt
   grep -v "^#" sample_solexa_only_gb_refs.SNPs.txt | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_solexa_only_gb_refs.SNPs.reduced.txt
-
-popd >& /dev/null
-
-: << 'END'
-
-  if ( ${sff_exists} > 0 ) then
-    if ( `cat ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs_find_variations.log.reduced | wc -l` > 0 ) then
+  
+  if ( `cat ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs_find_variations.log.reduced | wc -l` > 0 ) then
       sdiff \
-        ${db_name}_${col_name}_${bac_id}_454_only_gb_refs_find_variations.log.reduced \
-        ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs_find_variations.log.reduced | \
-        grep -v "[<|>]" | \
-        cut -f 1 > \
-          ${db_name}_${col_name}_${bac_id}_454_solexa_common_gb_refs_find_variations.log.reduced
-    else
-      cp \
-        ${db_name}_${col_name}_${bac_id}_454_only_gb_refs_find_variations.log.reduced \
-        ${db_name}_${col_name}_${bac_id}_454_solexa_common_gb_refs_find_variations.log.reduced
-    endif
+      ${db_name}_${col_name}_${bac_id}_454_only_gb_refs_find_variations.log.reduced \
+      ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs_find_variations.log.reduced | \
+      grep -v "[<|>]" | \
+      cut -f 1 > \
+      ${db_name}_${col_name}_${bac_id}_454_solexa_common_gb_refs_find_variations.log.reduced
   else
-    cp \
-      ${db_name}_${col_name}_${bac_id}_solexa_only_gb_refs_find_variations.log.reduced \
+      cp \
+      ${db_name}_${col_name}_${bac_id}_454_only_gb_refs_find_variations.log.reduced \
       ${db_name}_${col_name}_${bac_id}_454_solexa_common_gb_refs_find_variations.log.reduced
   endif
+
+popd >& /dev/null
+: << 'END'
 
   echo "INFO: building edited references based on common sff and fastq SNPs for [${db_name}_${col_name}_${bac_id}]"
   foreach seg ( `grep "^>" ${best_refs_file} | cut -d ' ' -f 1 | cut -c 2-` )
