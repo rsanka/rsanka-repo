@@ -37,6 +37,11 @@ set solexa_orig_fastq_file = "${solexa_orig_fastq_dir}/${solexa_orig_fastq_filen
 mkdir -p ${solexa_orig_fastq_dir}
 cp ${solexa_orig_fastq} ${solexa_orig_fastq_file}
 
+set solexa_orig_trimpts_filename = `basename ${solexa_orig_trimpts}`
+set solexa_orig_trimpts_file = "${solexa_orig_fastq_dir}/${solexa_orig_trimpts_filename}"
+cp ${solexa_orig_trimpts} ${solexa_orig_trimpts_file}
+
+
 set flu_a = 0
 switch ($db_name)
   case barda:
@@ -441,49 +446,38 @@ pushd ${sample_mapping_dir} >& /dev/null
   if ( -d 454_mapping_best_refs_chimera_check ) then
     rm -Rf 454_mapping_best_refs_chimera_check
   endif
-  newMapping 454_mapping_best_refs_chimera_check
-  setRef 454_mapping_best_refs_chimera_check ${best_edited_refs_file}
-  addRun 454_mapping_best_refs_chimera_check ${deconvolved_sff}
+  ${TOOLS_SFF_DIR}/newMapping 454_mapping_best_refs_chimera_check
+  ${TOOLS_SFF_DIR}/setRef 454_mapping_best_refs_chimera_check ${best_edited_refs_file}
+  ${TOOLS_SFF_DIR}/addRun 454_mapping_best_refs_chimera_check ${deconvolved_sff}
 
   if ( `cat ${solexa_orig_fastq_file} | wc -l` > 0 ) then
-    addRun 454_mapping_best_refs_chimera_check ${solexa_orig_fastq_file}
+    ${TOOLS_SFF_DIR}/addRun 454_mapping_best_refs_chimera_check ${solexa_orig_fastq_file}
   endif
 
-  runProject -no 454_mapping_best_refs_chimera_check >& runProject_454_mapping_best_refs_chimera_check.log
-  grep "Chimeric" 454_mapping_best_refs_chimera_check/mapping/454ReadStatus.txt | \
-    gawk '{print $1}' > exclude_list.txt
+#  ${TOOLS_SFF_DIR}/runProject -no 454_mapping_best_refs_chimera_check >& runProject_454_mapping_best_refs_chimera_check.log
+#  grep "Chimeric" 454_mapping_best_refs_chimera_check/mapping/454ReadStatus.txt | \
+#    gawk '{print $1}' > exclude_list.txt
 
-  cat ${solexa_orig_trimpts} | gawk -F'\t' '{if($2!=29){print $1;}}' >> exclude_list.txt
+  cat ${solexa_orig_trimpts_file} | gawk -F'\t' '{if($2!=29){print $1;}}' >> exclude_list.txt
   
-popd >& /dev/null
-: << 'END'
-  
-  set final_sff_reads = ${db_name}_${col_name}_${bac_id}_final.sff
-  set final_fastq_reads = ${db_name}_${col_name}_${bac_id}_final.fastq
-  set final_fasta_reads = ${db_name}_${col_name}_${bac_id}_final.fasta
+  set final_sff_reads = sample_final.sff
+  set final_fastq_reads = sample_final.fastq
+  set final_fastq_fna_reads = sample_final.fastq.fna
+  set final_fasta_reads = sample_final.fasta
 
-  if ( `cat ${sample_data_merged_sanger_file} | wc -l` > 0 ) then
-    cp ${sample_data_merged_sanger_file} ${final_fasta_reads}
-    cp ${sample_data_merged_sanger_file}.untrimmed ${final_fasta_reads}.untrimmed
-    cp ${sample_data_merged_sanger_file}.trimpoints ${final_fasta_reads}.trimpoints
+  if ( `cat ${sanger_orig_fasta_file} | wc -l` > 0 ) then
+    cp ${sanger_orig_fasta_file} ${final_fasta_reads}
   endif
-
-  foreach key (`ls -1 ${sample_data_merged_sff} | grep "\.[ACGT][ACGT][ACGT][ACGT]\." | cut -d '.' -f 2 | sort -u`)
-    sfffile \
-      -o ${final_sff_reads:r}.${key}.sff \
-      -e exclude_list.txt \
-      ${deconvolved_sff:r}.${key}.sff
-  end
-
+  
+  sfffile -o ${final_sff_reads} -e exclude_list.txt ${deconvolved_sff}
+  
   touch ${final_fastq_reads}
-  touch ${final_fastq_reads}.trimpoints
-  touch ${final_fastq_reads}.untrimmed
-
-  if ( `cat ${sample_data_merged_solexa_file} | wc -l` > 0 ) then
+  
+  if ( `cat ${solexa_orig_fastq_file} | wc -l` > 0 ) then
     /home/tstockwe/bin/fastqfile.pl \
       -o ${final_fastq_reads} \
       -e exclude_list.txt \
-      -f ${sample_data_merged_solexa_file}
+      -f ${solexa_orig_fastq_file}
 
     cat ${final_fastq_reads} | \
       gawk '{t=NR % 4;\
@@ -503,64 +497,32 @@ popd >& /dev/null
       gawk -F'\t' '{printf("@%s\n%s\n+%s\n%s\n", $1, $2, $3, $4);}' > ${final_fastq_reads}.sorted
     mv ${final_fastq_reads} ${final_fastq_reads}.unsorted
     mv ${final_fastq_reads}.sorted ${final_fastq_reads}
-
-    grep "^@SOLEXA" ${final_fastq_reads} | cut -c 2- | sort > include_list.txt
-    join -1 1 -2 1 \
-      include_list.txt \
-      ${sample_data_merged_solexa_file_t} | \
-      tr ' ' '\t' > ${final_fastq_reads}.trimpoints
-
-    /home/tstockwe/bin/fastqfile.pl \
-      -o ${final_fastq_reads}.untrimmed \
-      -i include_list.txt \
-      -f ${sample_data_merged_solexa_file_u}
-
-    cat ${final_fastq_reads}.untrimmed | \
-      gawk '{t=NR % 4;\
-             if(t==1){\
-               if(length(sid) > 0 ) {printf("%s\t%s\t%s\t%s\n", sid,s,qid,q)};\
-               sid=substr($0,2);\
-             }\
-             else if (t==2){s=$0;}\
-             else if (t==3){qid=substr($0,2);}\
-             else if (t==0){q=$0;}\
-            }\
-            END {\
-              if(length(sid) > 0 ) {printf("%s\t%s\t%s\t%s\n", sid,s,qid,q)};\
-              sid=substr($0,2);\
-            }' | \
-      sort | \
-      gawk -F'\t' '{printf("@%s\n%s\n+%s\n%s\n", $1, $2, $3, $4);}' > ${final_fastq_reads}.untrimmed.sorted
-    mv ${final_fastq_reads}.untrimmed.sorted ${final_fastq_reads}.untrimmed
   endif
-
-  echo "INFO: running clc_ref_assemble_long for [${db_name}_${col_name}_${bac_id}]"
+  
+  echo "INFO: running BOWTIE and SAMTOOLS for [${db_name}]"
 
   set input_read_files = ""
-  foreach key (`ls -1 ${sample_data_merged_sff} | grep "\.[ACGT][ACGT][ACGT][ACGT]\." | cut -d '.' -f 2 | sort -u`)
-    set input_read_files = `echo "${input_read_files} -q ${final_sff_reads:r}.${key}.sff"`
-  end
-
+  set input_read_files = `echo "${input_read_files} -q ${final_sff_reads}"`
+  
   if ( `cat ${final_fasta_reads} | wc -l` > 0 ) then
     set input_read_files = `echo "${input_read_files} -q ${final_fasta_reads}"`
   endif
-
+  
   if ( `cat ${final_fastq_reads} | wc -l` > 0 ) then
-    set input_read_files = `echo "${input_read_files} -q ${final_fastq_reads}"`
+    echo "INFO: converting solexa to fasta"
+    touch ${final_fastq_fna_reads}
+    ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -i ${final_fastq_reads} -o ${final_fastq_fna_reads}
+    set input_read_files = `echo "${input_read_files} -q ${final_fastq_fna_reads}"`
   endif
+  
+  echo "INFO: bowtie-build on best edited references fasta"
+  /usr/bin/bowtie-build ${best_edited_refs_file} BEST_EDITED_REFS
+  
+  echo "INFO: using BOWTIE and SAMTOOLS to acquire final consensus for [${db_name}]"
+  /usr/bin/bowtie -S -f BEST_EDITED_REFS ${final_sff_reads},${final_fasta_reads},${final_fastq_fna_reads} sample_hybrid_edited_refs.sam
+  /usr/bin/samtools view -bS -o sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sam
+  /usr/bin/samtools mpileup -uf ${best_edited_refs_file} sample_hybrid_edited_refs.bam | /usr/bin/bcftools view -cg - | ${TOOLS_PERL_DIR}/vcfutils.pl vcf2fq > sample_hybrid_edited_refs_consensus.fastq
 
-  clc_ref_assemble_long \
-    -s 0.95 \
-    -o ${db_name}_${col_name}_${bac_id}_hybrid_edited_refs.cas \
-    ${input_read_files} \
-    -d ${best_edited_refs_file}
-
-  find_variations \
-    -a ${db_name}_${col_name}_${bac_id}_hybrid_edited_refs.cas \
-    -c 2 \
-    -o ${db_name}_${col_name}_${bac_id}_hybrid_edited_refs.new_contigs \
-    -v \
-    -f 0.2 >& ${db_name}_${col_name}_${bac_id}_hybrid_edited_refs_find_variations.log
+  ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -i sample_hybrid_edited_refs_consensus.fastq -o sample_hybrid_edited_refs_consensus.fasta
     
 popd >& /dev/null
-END
