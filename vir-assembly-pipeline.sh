@@ -461,6 +461,7 @@ pushd ${sample_mapping_dir} >& /dev/null
   cat ${solexa_orig_trimpts_file} | gawk -F'\t' '{if($2!=29){print $1;}}' >> exclude_list.txt
   
   set final_sff_reads = sample_final.sff
+  set final_sff_fna_reads = sample_final.sff.fna
   set final_fastq_reads = sample_final.fastq
   set final_fastq_fna_reads = sample_final.fastq.fna
   set final_fasta_reads = sample_final.fasta
@@ -470,6 +471,10 @@ pushd ${sample_mapping_dir} >& /dev/null
   endif
   
   ${TOOLS_SFF_DIR}/sfffile -o ${final_sff_reads} -e exclude_list.txt ${deconvolved_sff}
+  
+  echo "INFO: converting final sff to fasta format"
+  touch ${final_sff_fna_reads}
+  ${TOOLS_SFF_DIR}/sffinfo -s ${final_sff_reads} | grep -v " length=0 " >> ${final_sff_fna_reads}
   
   touch ${final_fastq_reads}
   
@@ -519,7 +524,7 @@ pushd ${sample_mapping_dir} >& /dev/null
   /usr/bin/bowtie-build ${best_edited_refs_file} BEST_EDITED_REFS
   
   echo "INFO: using BOWTIE and SAMTOOLS to acquire final consensus for [${db_name}]"
-  /usr/bin/bowtie -S -f BEST_EDITED_REFS ${final_sff_reads},${final_fasta_reads},${final_fastq_fna_reads} sample_hybrid_edited_refs.sam
+  /usr/bin/bowtie -S -f BEST_EDITED_REFS ${final_sff_fna_reads},${final_fasta_reads},${final_fastq_fna_reads} sample_hybrid_edited_refs.sam
   /usr/bin/samtools view -bS -o sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sam
   /usr/bin/samtools mpileup -uf ${best_edited_refs_file} sample_hybrid_edited_refs.bam | /usr/bin/bcftools view -cg - | ${TOOLS_PERL_DIR}/vcfutils.pl vcf2fq > sample_hybrid_edited_refs_consensus.fastq
 
