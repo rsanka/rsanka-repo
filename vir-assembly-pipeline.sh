@@ -4,7 +4,8 @@ umask 002
 set seq454_orig_sff = $1
 set sanger_orig_fasta = $2
 set solexa_orig_fastq = $3
-set db_name = $4
+set solexa_orig_trimpts = $4
+set db_name = $5
 
 set ROOT_DIR = "/usr/local/VHTNGS"
 set PROJECT_DIR = "${ROOT_DIR}/project"
@@ -400,17 +401,17 @@ pushd ${sample_mapping_dir} >& /dev/null
   /usr/bin/bcftools view sample_solexa_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_solexa_only_gb_refs.SNPs.txt
   grep -v "^#" sample_solexa_only_gb_refs.SNPs.txt | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_solexa_only_gb_refs.SNPs.reduced.txt
   
-  if ( `cat sample_solexa_only_gb_refs.SNPs.log.reduced.txt | wc -l` > 0 ) then
+  if ( `cat sample_solexa_only_gb_refs.SNPs.reduced.txt | wc -l` > 0 ) then
       sdiff \
-      sample_454_only_gb_refs.SNPs.log.reduced.txt \
-      sample_solexa_only_gb_refs.SNPs.log.reduced.txt | \
+      sample_454_only_gb_refs.SNPs.reduced.txt \
+      sample_solexa_only_gb_refs.SNPs.reduced.txt | \
       grep -v "[<|>]" | \
       cut -f 1 > \
-      sample_454_solexa_common_gb_refs.SNPs.log.reduced.txt
+      sample_454_solexa_common_gb_refs.SNPs.reduced.txt
   else
       cp \
-      sample_454_only_gb_refs.SNPs.log.reduced.txt \
-      sample_454_solexa_common_gb_refs.SNPs.log.reduced.txt
+      sample_454_only_gb_refs.SNPs.reduced.txt \
+      sample_454_solexa_common_gb_refs.SNPs.reduced.txt
   endif
 
   echo "INFO: building edited references based on common sff and fastq SNPs for [${db_name}]"
@@ -435,30 +436,28 @@ pushd ${sample_mapping_dir} >& /dev/null
   cat sample_*.extracted.edited.fasta > \
     ${best_edited_refs_file}
   
-popd >& /dev/null
-: << 'END'
-  
-  echo "INFO: using 454 mapper for final chimera check for [${db_name}_${col_name}_${bac_id}]"
+  echo "INFO: using 454 mapper for final chimera check for [${db_name}]"
 
   if ( -d 454_mapping_best_refs_chimera_check ) then
     rm -Rf 454_mapping_best_refs_chimera_check
   endif
   newMapping 454_mapping_best_refs_chimera_check
   setRef 454_mapping_best_refs_chimera_check ${best_edited_refs_file}
+  addRun 454_mapping_best_refs_chimera_check ${deconvolved_sff}
 
-  foreach key (`ls -1 ${sample_data_merged_sff} | grep "\.[ACGT][ACGT][ACGT][ACGT]\." | cut -d '.' -f 2 | sort -u`)
-    addRun 454_mapping_best_refs_chimera_check ${deconvolved_sff:r}.${key}.sff
-  end
-
-  if ( `cat ${sample_data_merged_solexa_file} | wc -l` > 0 ) then
-    addRun 454_mapping_best_refs_chimera_check ${sample_data_merged_solexa_file}
+  if ( `cat ${solexa_orig_fastq_file} | wc -l` > 0 ) then
+    addRun 454_mapping_best_refs_chimera_check ${solexa_orig_fastq_file}
   endif
+
   runProject -no 454_mapping_best_refs_chimera_check >& runProject_454_mapping_best_refs_chimera_check.log
   grep "Chimeric" 454_mapping_best_refs_chimera_check/mapping/454ReadStatus.txt | \
     gawk '{print $1}' > exclude_list.txt
 
-  cat ${sample_data_merged_solexa_file_t} | gawk -F'\t' '{if($2!=29){print $1;}}' >> exclude_list.txt
-
+  cat ${solexa_orig_trimpts} | gawk -F'\t' '{if($2!=29){print $1;}}' >> exclude_list.txt
+  
+popd >& /dev/null
+: << 'END'
+  
   set final_sff_reads = ${db_name}_${col_name}_${bac_id}_final.sff
   set final_fastq_reads = ${db_name}_${col_name}_${bac_id}_final.fastq
   set final_fasta_reads = ${db_name}_${col_name}_${bac_id}_final.fasta
