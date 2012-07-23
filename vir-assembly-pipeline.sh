@@ -526,7 +526,8 @@ pushd ${sample_mapping_dir} >& /dev/null
   echo "INFO: using BOWTIE and SAMTOOLS to acquire final consensus for [${db_name}]"
   /usr/bin/bowtie -S -f BEST_EDITED_REFS ${final_sff_fna_reads},${final_fasta_reads},${final_fastq_fna_reads} sample_hybrid_edited_refs.sam
   /usr/bin/samtools view -bS -o sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sam
-  /usr/bin/samtools mpileup -uf ${best_edited_refs_file} sample_hybrid_edited_refs.bam | /usr/bin/bcftools view -cg - | ${TOOLS_PERL_DIR}/vcfutils.pl vcf2fq > sample_hybrid_edited_refs_consensus.fastq
+  /usr/bin/samtools sort sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sorted
+  /usr/bin/samtools mpileup -uf ${best_edited_refs_file} sample_hybrid_edited_refs.sorted.bam | /usr/bin/bcftools view -cg - | ${TOOLS_PERL_DIR}/vcfutils.pl vcf2fq > sample_hybrid_edited_refs_consensus.fastq
 
   ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -i sample_hybrid_edited_refs_consensus.fastq -o sample_hybrid_edited_refs_consensus.fasta
     
