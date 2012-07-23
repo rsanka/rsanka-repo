@@ -469,16 +469,16 @@ pushd ${sample_mapping_dir} >& /dev/null
     cp ${sanger_orig_fasta_file} ${final_fasta_reads}
   endif
   
-  sfffile -o ${final_sff_reads} -e exclude_list.txt ${deconvolved_sff}
+  ${TOOLS_SFF_DIR}/sfffile -o ${final_sff_reads} -e exclude_list.txt ${deconvolved_sff}
   
   touch ${final_fastq_reads}
   
   if ( `cat ${solexa_orig_fastq_file} | wc -l` > 0 ) then
-    /home/tstockwe/bin/fastqfile.pl \
+    ${TOOLS_PERL_DIR}/fastqfile.pl \
       -o ${final_fastq_reads} \
       -e exclude_list.txt \
       -f ${solexa_orig_fastq_file}
-
+    
     cat ${final_fastq_reads} | \
       gawk '{t=NR % 4;\
              if(t==1){\
