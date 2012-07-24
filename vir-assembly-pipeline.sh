@@ -529,6 +529,6 @@ pushd ${sample_mapping_dir} >& /dev/null
   samtools sort sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sorted
   samtools mpileup -uf ${best_edited_refs_file} sample_hybrid_edited_refs.sorted.bam | bcftools view -cg - | ${TOOLS_PERL_DIR}/vcfutils.pl vcf2fq > sample_hybrid_edited_refs_consensus.fastq
 
-#  ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -n -i sample_hybrid_edited_refs_consensus.fastq -o sample_hybrid_edited_refs_consensus.fasta
+  ${TOOLS_PERL_DIR}/fastq_to_fasta sample_hybrid_edited_refs_consensus.fastq sample_hybrid_edited_refs_consensus.fasta
     
 popd >& /dev/null
