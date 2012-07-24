@@ -337,7 +337,7 @@ foreach seg ( `echo ${segments} | tr ' ' '\n' ` )
       cat ${sample_seg_sanger_file} >> sample_nonchimera_${seg}_100x.fasta
     endif
     
-    /usr/local/bin/cap3 sample_nonchimera_${seg}_100x.fasta
+    cap3 sample_nonchimera_${seg}_100x.fasta
     mv sample_nonchimera_${seg}_100x.fasta.cap.contigs ${seg}_100x_contigs.fasta
     rm sample_nonchimera_${seg}_100x.fasta*
     
@@ -384,26 +384,26 @@ pushd ${sample_mapping_dir} >& /dev/null
   ${TOOLS_SFF_DIR}/sffinfo -s ${deconvolved_sff} | grep -v " length=0 " >> ${deconvolved_sff_fna}
   
   echo "INFO: bowtie-build on best references fasta"
-  /usr/bin/bowtie-build ${best_refs_file} BEST_REFS
+  bowtie-build ${best_refs_file} BEST_REFS
 
   echo "INFO: using BOWTIE and SAMTOOLS to find sff SNPs for [${db_name}]"
-  /usr/bin/bowtie -S -f BEST_REFS ${deconvolved_sff_fna} sample_454_only_gb_refs.sam
-  /usr/bin/samtools view -bS -o sample_454_only_gb_refs.bam sample_454_only_gb_refs.sam
-  /usr/bin/samtools sort sample_454_only_gb_refs.bam sample_454_only_gb_refs.sorted
-  /usr/bin/samtools mpileup -ugf ${best_refs_file} sample_454_only_gb_refs.sorted.bam | /usr/bin/bcftools view -bvcg - > sample_454_only_gb_refs.raw.bcf
-  /usr/bin/bcftools view sample_454_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_454_only_gb_refs.SNPs.txt
+  bowtie -S -f BEST_REFS ${deconvolved_sff_fna} sample_454_only_gb_refs.sam
+  samtools view -bS -o sample_454_only_gb_refs.bam sample_454_only_gb_refs.sam
+  samtools sort sample_454_only_gb_refs.bam sample_454_only_gb_refs.sorted
+  samtools mpileup -ugf ${best_refs_file} sample_454_only_gb_refs.sorted.bam | bcftools view -bvcg - > sample_454_only_gb_refs.raw.bcf
+  bcftools view sample_454_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_454_only_gb_refs.SNPs.txt
   grep -v "^#" sample_454_only_gb_refs.SNPs.txt | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_454_only_gb_refs.SNPs.reduced.txt
 
   echo "INFO: converting solexa to fasta"
   touch ${solexa_orig_fastq_fna_file}
-  ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -i ${solexa_orig_fastq_file} -o ${solexa_orig_fastq_fna_file}
+  ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -n -i ${solexa_orig_fastq_file} -o ${solexa_orig_fastq_fna_file}
   
   echo "INFO: using BOWTIE and SAMTOOLS to find fastq SNPs for [${db_name}]"
-  /usr/bin/bowtie -S -f BEST_REFS ${solexa_orig_fastq_fna_file} sample_solexa_only_gb_refs.sam
-  /usr/bin/samtools view -bS -o sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sam
-  /usr/bin/samtools sort sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sorted
-  /usr/bin/samtools mpileup -ugf ${best_refs_file} sample_solexa_only_gb_refs.sorted.bam | /usr/bin/bcftools view -bvcg - > sample_solexa_only_gb_refs.raw.bcf
-  /usr/bin/bcftools view sample_solexa_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_solexa_only_gb_refs.SNPs.txt
+  bowtie -S -f BEST_REFS ${solexa_orig_fastq_fna_file} sample_solexa_only_gb_refs.sam
+  samtools view -bS -o sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sam
+  samtools sort sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sorted
+  samtools mpileup -ugf ${best_refs_file} sample_solexa_only_gb_refs.sorted.bam | bcftools view -bvcg - > sample_solexa_only_gb_refs.raw.bcf
+  bcftools view sample_solexa_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_solexa_only_gb_refs.SNPs.txt
   grep -v "^#" sample_solexa_only_gb_refs.SNPs.txt | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_solexa_only_gb_refs.SNPs.reduced.txt
   
   if ( `cat sample_solexa_only_gb_refs.SNPs.reduced.txt | wc -l` > 0 ) then
@@ -516,19 +516,19 @@ pushd ${sample_mapping_dir} >& /dev/null
   if ( `cat ${final_fastq_reads} | wc -l` > 0 ) then
     echo "INFO: converting solexa to fasta"
     touch ${final_fastq_fna_reads}
-    ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -i ${final_fastq_reads} -o ${final_fastq_fna_reads}
+    ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -n -i ${final_fastq_reads} -o ${final_fastq_fna_reads}
     set input_read_files = `echo "${input_read_files} -q ${final_fastq_fna_reads}"`
   endif
   
   echo "INFO: bowtie-build on best edited references fasta"
-  /usr/bin/bowtie-build ${best_edited_refs_file} BEST_EDITED_REFS
+  bowtie-build ${best_edited_refs_file} BEST_EDITED_REFS
   
   echo "INFO: using BOWTIE and SAMTOOLS to acquire final consensus for [${db_name}]"
-  /usr/bin/bowtie -S -f BEST_EDITED_REFS ${final_sff_fna_reads},${final_fasta_reads},${final_fastq_fna_reads} sample_hybrid_edited_refs.sam
-  /usr/bin/samtools view -bS -o sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sam
-  /usr/bin/samtools sort sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sorted
-  /usr/bin/samtools mpileup -uf ${best_edited_refs_file} sample_hybrid_edited_refs.sorted.bam | /usr/bin/bcftools view -cg - | ${TOOLS_PERL_DIR}/vcfutils.pl vcf2fq > sample_hybrid_edited_refs_consensus.fastq
+  bowtie -S -f BEST_EDITED_REFS ${final_sff_fna_reads},${final_fasta_reads},${final_fastq_fna_reads} sample_hybrid_edited_refs.sam
+  samtools view -bS -o sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sam
+  samtools sort sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sorted
+  samtools mpileup -uf ${best_edited_refs_file} sample_hybrid_edited_refs.sorted.bam | bcftools view -cg - | ${TOOLS_PERL_DIR}/vcfutils.pl vcf2fq > sample_hybrid_edited_refs_consensus.fastq
 
-  ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -i sample_hybrid_edited_refs_consensus.fastq -o sample_hybrid_edited_refs_consensus.fasta
+#  ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -n -i sample_hybrid_edited_refs_consensus.fastq -o sample_hybrid_edited_refs_consensus.fasta
     
 popd >& /dev/null
