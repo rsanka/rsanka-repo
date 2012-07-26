@@ -391,7 +391,7 @@ pushd ${sample_mapping_dir} >& /dev/null
   samtools view -bS -o sample_454_only_gb_refs.bam sample_454_only_gb_refs.sam
   samtools sort sample_454_only_gb_refs.bam sample_454_only_gb_refs.sorted
   samtools mpileup -ugf ${best_refs_file} sample_454_only_gb_refs.sorted.bam | bcftools view -bvcg - > sample_454_only_gb_refs.raw.bcf
-  bcftools view sample_454_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_454_only_gb_refs.SNPs.txt
+  bcftools view sample_454_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter > sample_454_only_gb_refs.SNPs.txt
   grep -v "^#" sample_454_only_gb_refs.SNPs.txt | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_454_only_gb_refs.SNPs.reduced.txt
 
   echo "INFO: converting solexa to fasta"
@@ -403,7 +403,7 @@ pushd ${sample_mapping_dir} >& /dev/null
   samtools view -bS -o sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sam
   samtools sort sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sorted
   samtools mpileup -ugf ${best_refs_file} sample_solexa_only_gb_refs.sorted.bam | bcftools view -bvcg - > sample_solexa_only_gb_refs.raw.bcf
-  bcftools view sample_solexa_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter -D 500 > sample_solexa_only_gb_refs.SNPs.txt
+  bcftools view sample_solexa_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter > sample_solexa_only_gb_refs.SNPs.txt
   grep -v "^#" sample_solexa_only_gb_refs.SNPs.txt | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_solexa_only_gb_refs.SNPs.reduced.txt
   
   if ( `cat sample_solexa_only_gb_refs.SNPs.reduced.txt | wc -l` > 0 ) then
@@ -529,6 +529,6 @@ pushd ${sample_mapping_dir} >& /dev/null
   samtools sort sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sorted
   samtools mpileup -uf ${best_edited_refs_file} sample_hybrid_edited_refs.sorted.bam | bcftools view -cg - | ${TOOLS_PERL_DIR}/vcfutils.pl vcf2fq > sample_hybrid_edited_refs_consensus.fastq
 
-  ${TOOLS_PERL_DIR}/fastq_to_fasta sample_hybrid_edited_refs_consensus.fastq sample_hybrid_edited_refs_consensus.fasta
+  ${TOOLS_PERL_DIR}/multi_line_fastq_to_fasta.pl sample_hybrid_edited_refs_consensus.fastq sample_hybrid_edited_refs_consensus.fasta
     
 popd >& /dev/null
