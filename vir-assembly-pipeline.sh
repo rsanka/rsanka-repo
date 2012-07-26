@@ -378,19 +378,21 @@ mkdir -p ${sample_mapping_dir}
 pushd ${sample_mapping_dir} >& /dev/null
   set deconvolved_sff_fna = ${deconvolved_sff}.fna
   set deconvolved_sff_fna_qual = ${deconvolved_sff}.fna.qual
+  set deconvolved_sff_fastq = ${deconvolved_sff}.fastq
 #  set solexa_orig_fastq_fna_file = ${solexa_orig_fastq_file}.fna
   
-  echo "INFO: converting non-chimeric sff to fasta"
+  echo "INFO: converting non-chimeric sff to fastq"
   touch ${deconvolved_sff_fna}
   touch ${deconvolved_sff_fna_qual}
   ${TOOLS_SFF_DIR}/sffinfo -s ${deconvolved_sff} | grep -v " length=0 " >> ${deconvolved_sff_fna}
   ${TOOLS_SFF_DIR}/sffinfo -q ${deconvolved_sff} | grep -v " length=0 " >> ${deconvolved_sff_fna_qual}
+  ${TOOLS_PERL_DIR}/fasta_qual_to_fastq.pl ${deconvolved_sff_fna} ${deconvolved_sff_fna_qual} 33
   
   echo "INFO: bowtie-build on best references fasta"
   bowtie-build ${best_refs_file} BEST_REFS
 
   echo "INFO: using BOWTIE and SAMTOOLS to find sff SNPs for [${db_name}]"
-  bowtie -S -f BEST_REFS ${deconvolved_sff_fna} -Q ${deconvolved_sff_fna_qual} sample_454_only_gb_refs.sam
+  bowtie -S BEST_REFS ${deconvolved_sff_fastq} sample_454_only_gb_refs.sam
   samtools view -bS -o sample_454_only_gb_refs.bam sample_454_only_gb_refs.sam
   samtools sort sample_454_only_gb_refs.bam sample_454_only_gb_refs.sorted
   samtools mpileup -ugf ${best_refs_file} sample_454_only_gb_refs.sorted.bam | bcftools view -bvcg - > sample_454_only_gb_refs.raw.bcf
