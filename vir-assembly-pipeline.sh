@@ -14,7 +14,7 @@ set TOOLS_DIR = "${ROOT_DIR}/tools"
 set TOOLS_BINARIES_DIR = "${TOOLS_DIR}/BINARIES"
 set TOOLS_PERL_DIR = "${TOOLS_DIR}/PERL"
 set TOOLS_RUBYDIR_DIR = "${TOOLS_DIR}/RUBYLIB"
-set TOOLS_SFF_DIR = "${TOOLS_DIR}/SFF"
+set TOOLS_SFF_DIR = "${TOOLS_DIR}/seq454-64_v2.6"
 set TOOLS_FASTX_DIR = "${TOOLS_DIR}/FASTX"
 
 cd ${PROJECT_DIR}
@@ -379,14 +379,13 @@ pushd ${sample_mapping_dir} >& /dev/null
   set deconvolved_sff_fna = ${deconvolved_sff}.fna
   set deconvolved_sff_fna_qual = ${deconvolved_sff}.fna.qual
   set deconvolved_sff_fastq = ${deconvolved_sff}.fastq
-#  set solexa_orig_fastq_fna_file = ${solexa_orig_fastq_file}.fna
   
   echo "INFO: converting non-chimeric sff to fastq"
   touch ${deconvolved_sff_fna}
   touch ${deconvolved_sff_fna_qual}
   ${TOOLS_SFF_DIR}/sffinfo -s ${deconvolved_sff} | grep -v " length=0 " >> ${deconvolved_sff_fna}
   ${TOOLS_SFF_DIR}/sffinfo -q ${deconvolved_sff} | grep -v " length=0 " >> ${deconvolved_sff_fna_qual}
-  ${TOOLS_PERL_DIR}/fasta_qual_to_fastq.pl ${deconvolved_sff_fna} ${deconvolved_sff_fna_qual} 33
+  ${TOOLS_PERL_DIR}/fasta_qual_to_fastq.pl ${deconvolved_sff_fna} ${deconvolved_sff_fna_qual} 33 ${deconvolved_sff_fastq}
   
   echo "INFO: bowtie-build on best references fasta"
   bowtie-build ${best_refs_file} BEST_REFS
@@ -399,10 +398,6 @@ pushd ${sample_mapping_dir} >& /dev/null
   bcftools view sample_454_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter > sample_454_only_gb_refs.SNPs.txt
   grep -v "^#" sample_454_only_gb_refs.SNPs.txt | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_454_only_gb_refs.SNPs.reduced.txt
 
-#  echo "INFO: converting solexa to fasta"
-#  touch ${solexa_orig_fastq_fna_file}
-#  ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -n -i ${solexa_orig_fastq_file} -o ${solexa_orig_fastq_fna_file}
-  
   echo "INFO: using BOWTIE and SAMTOOLS to find fastq SNPs for [${db_name}]"
   bowtie -S BEST_REFS ${solexa_orig_fastq_file} sample_solexa_only_gb_refs.sam
   samtools view -bS -o sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sam
@@ -459,37 +454,49 @@ pushd ${sample_mapping_dir} >& /dev/null
     ${TOOLS_SFF_DIR}/addRun 454_mapping_best_refs_chimera_check ${solexa_orig_fastq_file}
   endif
 
-#  ${TOOLS_SFF_DIR}/runProject -no 454_mapping_best_refs_chimera_check >& runProject_454_mapping_best_refs_chimera_check.log
-#  grep "Chimeric" 454_mapping_best_refs_chimera_check/mapping/454ReadStatus.txt | \
-#    gawk '{print $1}' > exclude_list.txt
+  ${TOOLS_SFF_DIR}/runProject -no 454_mapping_best_refs_chimera_check >& runProject_454_mapping_best_refs_chimera_check.log
+  grep "Chimeric" 454_mapping_best_refs_chimera_check/mapping/454ReadStatus.txt | \
+    gawk '{print $1}' > exclude_list.txt
 
   cat ${solexa_orig_trimpts_file} | gawk -F'\t' '{if($2!=29){print $1;}}' >> exclude_list.txt
   
-  set final_sff_reads = sample_final.sff
-  set final_sff_fna_reads = sample_final.sff.fna
-  set final_fastq_reads = sample_final.fastq
-  set final_fastq_fna_reads = sample_final.fastq.fna
-  set final_fasta_reads = sample_final.fasta
+  set final_sff = final_sff.sff
+  set final_sff_fna = final_sff.fna
+  set final_sff_qual = final_sff.fna.qual
+  set final_sff_fastq = final_sff.fastq
+  set final_solexa = final_solexa.fastq
+  set final_sanger = final_sanger.fna
+  set final_sanger_qual = final_sanger.fna.qual
+  set final_sanger_fastq = final_sanger.fastq
 
+  echo "INFO: converting final sanger to fastq format"
   if ( `cat ${sanger_orig_fasta_file} | wc -l` > 0 ) then
-    cp ${sanger_orig_fasta_file} ${final_fasta_reads}
+    cp ${sanger_orig_fasta_file} ${final_sanger}
+    touch ${final_sanger_qual}
+    touch ${final_sanger_fastq}
+    ${TOOLS_PERL_DIR}/create_dummy_qual.pl ${final_sanger} ${final_sanger_qual}
+    ${TOOLS_PERL_DIR}/fasta_qual_to_fastq.pl ${final_sanger} ${final_fasta_qual} 33 ${final_sanger_fastq}
   endif
   
-  ${TOOLS_SFF_DIR}/sfffile -o ${final_sff_reads} -e exclude_list.txt ${deconvolved_sff}
+  ${TOOLS_SFF_DIR}/sfffile -o ${final_sff} -e exclude_list.txt ${deconvolved_sff}
   
-  echo "INFO: converting final sff to fasta format"
-  touch ${final_sff_fna_reads}
-  ${TOOLS_SFF_DIR}/sffinfo -s ${final_sff_reads} | grep -v " length=0 " >> ${final_sff_fna_reads}
-  
-  touch ${final_fastq_reads}
+  echo "INFO: converting final sff to fastq format"
+  touch ${final_sff_fna}
+  touch ${final_sff_qual}
+  touch ${final_sff_fastq}
+  ${TOOLS_SFF_DIR}/sffinfo -s ${final_sff} | grep -v " length=0 " >> ${final_sff_fna}
+  ${TOOLS_SFF_DIR}/sffinfo -q ${final_sff} | grep -v " length=0 " >> ${final_sff_qual}
+  ${TOOLS_PERL_DIR}/fasta_qual_to_fastq.pl ${deconvolved_sff_fna} ${deconvolved_sff_fna_qual} 33 ${final_sff_fastq}
+
+  touch ${final_solexa}
   
   if ( `cat ${solexa_orig_fastq_file} | wc -l` > 0 ) then
     ${TOOLS_PERL_DIR}/fastqfile.pl \
-      -o ${final_fastq_reads} \
+      -o ${final_solexa} \
       -e exclude_list.txt \
       -f ${solexa_orig_fastq_file}
     
-    cat ${final_fastq_reads} | \
+    cat ${final_solexa} | \
       gawk '{t=NR % 4;\
              if(t==1){\
                if(length(sid) > 0 ) {printf("%s\t%s\t%s\t%s\n", sid,s,qid,q)};\
@@ -504,32 +511,16 @@ pushd ${sample_mapping_dir} >& /dev/null
               sid=substr($0,2);\
             }' | \
       sort | \
-      gawk -F'\t' '{printf("@%s\n%s\n+%s\n%s\n", $1, $2, $3, $4);}' > ${final_fastq_reads}.sorted
-    mv ${final_fastq_reads} ${final_fastq_reads}.unsorted
-    mv ${final_fastq_reads}.sorted ${final_fastq_reads}
-  endif
-  
-  echo "INFO: running BOWTIE and SAMTOOLS for [${db_name}]"
-
-  set input_read_files = ""
-  set input_read_files = `echo "${input_read_files} -q ${final_sff_reads}"`
-  
-  if ( `cat ${final_fasta_reads} | wc -l` > 0 ) then
-    set input_read_files = `echo "${input_read_files} -q ${final_fasta_reads}"`
-  endif
-  
-  if ( `cat ${final_fastq_reads} | wc -l` > 0 ) then
-    echo "INFO: converting solexa to fasta"
-    touch ${final_fastq_fna_reads}
-    ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -n -i ${final_fastq_reads} -o ${final_fastq_fna_reads}
-    set input_read_files = `echo "${input_read_files} -q ${final_fastq_fna_reads}"`
+      gawk -F'\t' '{printf("@%s\n%s\n+%s\n%s\n", $1, $2, $3, $4);}' > ${final_solexa}.sorted
+    mv ${final_solexa} ${final_solexa}.unsorted
+    mv ${final_solexa}.sorted ${final_solexa}
   endif
   
   echo "INFO: bowtie-build on best edited references fasta"
   bowtie-build ${best_edited_refs_file} BEST_EDITED_REFS
   
   echo "INFO: using BOWTIE and SAMTOOLS to acquire final consensus for [${db_name}]"
-  bowtie -S -f BEST_EDITED_REFS ${final_sff_fna_reads},${final_fasta_reads},${final_fastq_fna_reads} sample_hybrid_edited_refs.sam
+  bowtie -S BEST_EDITED_REFS ${final_sff_fastq},${final_sanger_fastq},${final_solexa} sample_hybrid_edited_refs.sam
   samtools view -bS -o sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sam
   samtools sort sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sorted
   samtools mpileup -uf ${best_edited_refs_file} sample_hybrid_edited_refs.sorted.bam | bcftools view -cg - | ${TOOLS_PERL_DIR}/vcfutils.pl vcf2fq > sample_hybrid_edited_refs_consensus.fastq
