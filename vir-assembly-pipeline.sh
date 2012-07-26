@@ -377,29 +377,32 @@ mkdir -p ${sample_mapping_dir}
 
 pushd ${sample_mapping_dir} >& /dev/null
   set deconvolved_sff_fna = ${deconvolved_sff}.fna
-  set solexa_orig_fastq_fna_file = ${solexa_orig_fastq_file}.fna
+  set deconvolved_sff_fna_qual = ${deconvolved_sff}.fna.qual
+#  set solexa_orig_fastq_fna_file = ${solexa_orig_fastq_file}.fna
   
   echo "INFO: converting non-chimeric sff to fasta"
   touch ${deconvolved_sff_fna}
+  touch ${deconvolved_sff_fna_qual}
   ${TOOLS_SFF_DIR}/sffinfo -s ${deconvolved_sff} | grep -v " length=0 " >> ${deconvolved_sff_fna}
+  ${TOOLS_SFF_DIR}/sffinfo -q ${deconvolved_sff} | grep -v " length=0 " >> ${deconvolved_sff_fna_qual}
   
   echo "INFO: bowtie-build on best references fasta"
   bowtie-build ${best_refs_file} BEST_REFS
 
   echo "INFO: using BOWTIE and SAMTOOLS to find sff SNPs for [${db_name}]"
-  bowtie -S -f BEST_REFS ${deconvolved_sff_fna} sample_454_only_gb_refs.sam
+  bowtie -S -f BEST_REFS ${deconvolved_sff_fna} -Q ${deconvolved_sff_fna_qual} sample_454_only_gb_refs.sam
   samtools view -bS -o sample_454_only_gb_refs.bam sample_454_only_gb_refs.sam
   samtools sort sample_454_only_gb_refs.bam sample_454_only_gb_refs.sorted
   samtools mpileup -ugf ${best_refs_file} sample_454_only_gb_refs.sorted.bam | bcftools view -bvcg - > sample_454_only_gb_refs.raw.bcf
   bcftools view sample_454_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter > sample_454_only_gb_refs.SNPs.txt
   grep -v "^#" sample_454_only_gb_refs.SNPs.txt | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_454_only_gb_refs.SNPs.reduced.txt
 
-  echo "INFO: converting solexa to fasta"
-  touch ${solexa_orig_fastq_fna_file}
-  ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -n -i ${solexa_orig_fastq_file} -o ${solexa_orig_fastq_fna_file}
+#  echo "INFO: converting solexa to fasta"
+#  touch ${solexa_orig_fastq_fna_file}
+#  ${TOOLS_FASTX_DIR}/fastq_to_fasta -Q 33 -n -i ${solexa_orig_fastq_file} -o ${solexa_orig_fastq_fna_file}
   
   echo "INFO: using BOWTIE and SAMTOOLS to find fastq SNPs for [${db_name}]"
-  bowtie -S -f BEST_REFS ${solexa_orig_fastq_fna_file} sample_solexa_only_gb_refs.sam
+  bowtie -S BEST_REFS ${solexa_orig_fastq_file} sample_solexa_only_gb_refs.sam
   samtools view -bS -o sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sam
   samtools sort sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sorted
   samtools mpileup -ugf ${best_refs_file} sample_solexa_only_gb_refs.sorted.bam | bcftools view -bvcg - > sample_solexa_only_gb_refs.raw.bcf
