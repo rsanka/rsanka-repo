@@ -475,7 +475,7 @@ pushd ${sample_mapping_dir} >& /dev/null
     touch ${final_sanger_qual}
     touch ${final_sanger_fastq}
     ${TOOLS_PERL_DIR}/create_dummy_qual.pl ${final_sanger} ${final_sanger_qual}
-    ${TOOLS_PERL_DIR}/fasta_qual_to_fastq.pl ${final_sanger} ${final_fasta_qual} 33 ${final_sanger_fastq}
+    ${TOOLS_PERL_DIR}/fasta_qual_to_fastq.pl ${final_sanger} ${final_sanger_qual} 33 ${final_sanger_fastq}
   endif
   
   ${TOOLS_SFF_DIR}/sfffile -o ${final_sff} -e exclude_list.txt ${deconvolved_sff}
