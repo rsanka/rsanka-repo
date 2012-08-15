@@ -387,24 +387,25 @@ pushd ${sample_mapping_dir} >& /dev/null
   ${TOOLS_SFF_DIR}/sffinfo -q ${deconvolved_sff} | grep -v " length=0 " >> ${deconvolved_sff_fna_qual}
   ${TOOLS_PERL_DIR}/fasta_qual_to_fastq.pl ${deconvolved_sff_fna} ${deconvolved_sff_fna_qual} 33 ${deconvolved_sff_fastq}
   
-  echo "INFO: bowtie-build on best references fasta"
-  bowtie-build ${best_refs_file} BEST_REFS
+  echo "INFO: bwa index on best references fasta"
+  bwa index -a is ${best_refs_file}
 
-  echo "INFO: using BOWTIE and SAMTOOLS to find sff SNPs for [${db_name}]"
-  bowtie -S BEST_REFS ${deconvolved_sff_fastq} sample_454_only_gb_refs.sam
+  echo "INFO: using BWA and SAMTOOLS to find sff SNPs for [${db_name}]"
+  bwa bwasw ${best_refs_file} ${deconvolved_sff_fastq} > sample_454_only_gb_refs.sam
   samtools view -bS -o sample_454_only_gb_refs.bam sample_454_only_gb_refs.sam
   samtools sort sample_454_only_gb_refs.bam sample_454_only_gb_refs.sorted
   samtools mpileup -ugf ${best_refs_file} sample_454_only_gb_refs.sorted.bam | bcftools view -bvcg - > sample_454_only_gb_refs.raw.bcf
   bcftools view sample_454_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter > sample_454_only_gb_refs.SNPs.txt
-  grep -v "^#" sample_454_only_gb_refs.SNPs.txt | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_454_only_gb_refs.SNPs.reduced.txt
+  grep -v "^#" sample_454_only_gb_refs.SNPs.txt | grep -v "INDEL" | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_454_only_gb_refs.SNPs.reduced.txt
 
-  echo "INFO: using BOWTIE and SAMTOOLS to find solexa SNPs for [${db_name}]"
-  bowtie -S BEST_REFS ${solexa_orig_fastq_file} sample_solexa_only_gb_refs.sam
+  echo "INFO: using BWA and SAMTOOLS to find solexa SNPs for [${db_name}]"
+  bwa aln ${best_refs_file} ${solexa_orig_fastq_file} > sample_solexa_only_gb_refs.sai
+  bwa samse ${best_refs_file} sample_solexa_only_gb_refs.sai ${solexa_orig_fastq_file} > sample_solexa_only_gb_refs.sam
   samtools view -bS -o sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sam
   samtools sort sample_solexa_only_gb_refs.bam sample_solexa_only_gb_refs.sorted
   samtools mpileup -ugf ${best_refs_file} sample_solexa_only_gb_refs.sorted.bam | bcftools view -bvcg - > sample_solexa_only_gb_refs.raw.bcf
   bcftools view sample_solexa_only_gb_refs.raw.bcf | ${TOOLS_PERL_DIR}/vcfutils.pl varFilter > sample_solexa_only_gb_refs.SNPs.txt
-  grep -v "^#" sample_solexa_only_gb_refs.SNPs.txt | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_solexa_only_gb_refs.SNPs.reduced.txt
+  grep -v "^#" sample_solexa_only_gb_refs.SNPs.txt | grep -v "INDEL" | gawk -F'\t' '{split($10,a,":"); printf("%s:%s:%s:%s\n",$1,$2,$5,a[2]);}' | gawk -F':' '{if(index($3,",")>0) {split($4,s,",") split($3,b,","); if(s[3]>s[6]) printf("%s:%s:%s\n",$1,$2,b[2]); else printf("%s:%s:%s\n",$1,$2,b[1]);} else printf("%s:%s:%s\n",$1,$2,$3);}' > sample_solexa_only_gb_refs.SNPs.reduced.txt
   
   if ( `cat sample_solexa_only_gb_refs.SNPs.reduced.txt | wc -l` > 0 ) then
       sdiff \
@@ -465,10 +466,6 @@ pushd ${sample_mapping_dir} >& /dev/null
   set final_sff_qual = final_sff.fna.qual
   set final_sff_fastq = final_sff.fastq
   set final_solexa = final_solexa.fastq
-  set final_sanger = final_sanger.fna
-  set final_sanger_qual = final_sanger.fna.qual
-  set final_sanger_fastq = final_sanger.fastq
-  set input_read_files = ""
   
   ${TOOLS_SFF_DIR}/sfffile -o ${final_sff} -e exclude_list.txt ${deconvolved_sff}
   
@@ -478,8 +475,7 @@ pushd ${sample_mapping_dir} >& /dev/null
   touch ${final_sff_fastq}
   ${TOOLS_SFF_DIR}/sffinfo -s ${final_sff} | grep -v " length=0 " >> ${final_sff_fna}
   ${TOOLS_SFF_DIR}/sffinfo -q ${final_sff} | grep -v " length=0 " >> ${final_sff_qual}
-  ${TOOLS_PERL_DIR}/fasta_qual_to_fastq.pl ${deconvolved_sff_fna} ${deconvolved_sff_fna_qual} 33 ${final_sff_fastq}
-  set input_read_files = `echo "${final_sff_fastq}"`
+  ${TOOLS_PERL_DIR}/fasta_qual_to_fastq.pl ${final_sff_fna} ${final_sff_qual} 33 ${final_sff_fastq}
   
   echo "INFO: Sorting and removing exluded reads from final solexa"
   touch ${final_solexa}
@@ -507,27 +503,30 @@ pushd ${sample_mapping_dir} >& /dev/null
       gawk -F'\t' '{printf("@%s\n%s\n+%s\n%s\n", $1, $2, $3, $4);}' > ${final_solexa}.sorted
     mv ${final_solexa} ${final_solexa}.unsorted
     mv ${final_solexa}.sorted ${final_solexa}
-    set input_read_files = `echo "${input_read_files},${final_solexa}"`
   endif
   
-  echo "INFO: converting final sanger to fastq format"
-  if ( `cat ${sanger_orig_fasta_file} | wc -l` > 0 ) then
-    cp ${sanger_orig_fasta_file} ${final_sanger}
-    touch ${final_sanger_qual}
-    touch ${final_sanger_fastq}
-    ${TOOLS_PERL_DIR}/create_dummy_qual.pl ${final_sanger} ${final_sanger_qual}
-    ${TOOLS_PERL_DIR}/fasta_qual_to_fastq.pl ${final_sanger} ${final_sanger_qual} 33 ${final_sanger_fastq}
-    set input_read_files = `echo "${input_read_files},${final_sanger_fastq}"`
-  endif
+  echo "INFO: bwa index on best edited references fasta"
+  bwa index -a is ${best_edited_refs_file}
   
-  echo "INFO: bowtie-build on best edited references fasta"
-  bowtie-build ${best_edited_refs_file} BEST_EDITED_REFS
+  echo "INFO: Using BWA and SAMTOOLS to generate sorted bam of final sff/best edited refs"
+  bwa bwasw ${best_edited_refs_file} ${final_sff_fastq} > final_sff_mapping.sam
+  samtools view -bS -o final_sff_mapping.bam final_sff_mapping.sam
+  samtools sort final_sff_mapping.bam final_sff_mapping.sorted
   
-  echo "INFO: using BOWTIE and SAMTOOLS to acquire final consensus for [${db_name}]"
-  bowtie -S BEST_EDITED_REFS ${input_read_files} sample_hybrid_edited_refs.sam
-  samtools view -bS -o sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sam
-  samtools sort sample_hybrid_edited_refs.bam sample_hybrid_edited_refs.sorted
-  samtools mpileup -uf ${best_edited_refs_file} sample_hybrid_edited_refs.sorted.bam | bcftools view -cg - | ${TOOLS_PERL_DIR}/vcfutils.pl vcf2fq > sample_hybrid_edited_refs_consensus.fastq
+  echo "INFO: Using BWA and SAMTOOLS to generate sorted bam of final sanger/best edited refs"
+  bwa bwasw ${best_edited_refs_file} ${sanger_orig_fasta_file} > final_sanger_mapping.sam
+  samtools view -bS -o final_sanger_mapping.bam final_sanger_mapping.sam
+  samtools sort final_sanger_mapping.bam final_sanger_mapping.sorted
+  
+  echo "INFO: Using BWA and SAMTOOLS to generate sorted bam of final solexa/best edited refs"
+  bwa aln ${best_edited_refs_file} ${final_solexa} > final_solexa_mapping.sai
+  bwa samse ${best_edited_refs_file} final_solexa_mapping.sai ${final_solexa} > final_solexa_mapping.sam
+  samtools view -bS -o final_solexa_mapping.bam final_solexa_mapping.sam
+  samtools sort final_solexa_mapping.bam final_solexa_mapping.sorted
+  
+  echo "INFO: Using BWA and SAMTOOLS to merge 3 final sorted bams, then generate final consensus for [${db_name}]"
+  samtools merge final_all.sorted.bam final_sff_mapping.sorted.bam final_sanger_mapping.sorted.bam final_solexa_mapping.sorted.bam
+  samtools mpileup -uf ${best_edited_refs_file} final_all.sorted.bam | bcftools view -cg - | ${TOOLS_PERL_DIR}/vcfutils.pl vcf2fq > sample_hybrid_edited_refs_consensus.fastq
 
   ${TOOLS_PERL_DIR}/multi_line_fastq_to_fasta.pl sample_hybrid_edited_refs_consensus.fastq sample_hybrid_edited_refs_consensus.fasta
     
