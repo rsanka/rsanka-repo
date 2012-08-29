@@ -167,6 +167,7 @@ def _install_vigor():
     sudo("chmod 755 %s" % os.path.join(env.VIGOR_RUNTIME_DIR, "*.pl"))
     if not _path_exists(os.path.join(env.EXE_DIR, "perl")):
         sudo("ln -s %s %s" % ("/usr/bin/perl", env.EXE_DIR))
+        sudo("ln -s %s %s" % ("/usr/bin/perl", "/usr/local/bin"))
     if not _path_exists(os.path.join(env.EXE_DIR, "vigorscratch")):
         sudo("ln -s %s %s/vigorscratch" % (env.VIGOR_TEMPSPACE_DIR, env.EXE_DIR))
 
