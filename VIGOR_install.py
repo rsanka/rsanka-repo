@@ -101,7 +101,7 @@ def _initialize_script():
     env.GITHUB_URL = 'https://github.com/downloads/JCVI-Cloud/cloudbiolinux'
     env.BLAST_NAME = 'blast-2.2.15'
     env.CLUSTALW_NAME = 'clustalw-1.83'
-    env.VIGOR_NAME = 'vigor-GSCcloud-release-20120928'
+    env.VIGOR_NAME = 'vigor-GSCcloud-release-20121204'
 
     print("user[%(user)s]" % env)
     print("host[%(host)s]" % env)
